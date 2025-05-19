@@ -1,4 +1,4 @@
-# Papelio - Research & Authentication System
+# Papelio - Research System
 
 Papelio is a research platform developed using Spring Boot. It allows users to search for academic articles, manage user roles, track research history, and ensure compliance with data security standards.
 
@@ -72,11 +72,21 @@ Papelio is a research platform developed using Spring Boot. It allows users to s
 
 2. **Run using Docker Compose:**
    ```bash
-   docker compose up
+   docker-compose up
    ```
     - Application will be accessible at [http://localhost](http://localhost).
     - PostgreSQL database will be mapped to port 5433.
 
+## Default Admin Credentials
+
+The system is pre-configured with the following default administrator account:
+
+- **Email:** admin@example.com
+- **Password:** admin123
+
+> **IMPORTANT SECURITY NOTICE:** For security reasons, it is strongly recommended to change these default credentials immediately after the first login. Using default credentials in a production environment poses a significant security risk.
+
 ## License
 This project is open-source and available under the MIT License.
 
+`
