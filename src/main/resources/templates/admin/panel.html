@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html data-bs-theme="light"
+      lang="en"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css?family=Karla:400,700&display=swap" rel="stylesheet">
+    <link href="https://cdn.materialdesignicons.com/4.8.95/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/panel-styles.css}">
+    <link rel="icon" th:href="@{/images/favicon.ico}" type="image/x-icon">
+</head>
+<body>
+<div class="container mt-5">
+    <div class="panel-card">
+        <div class="card-body">
+            <div class="panel-header">
+                <div>
+                    <div class="brand-wrapper">
+                        <img alt="logo" class="logo logo-light" th:src="@{/images/logo.png}">
+                        <img alt="logo" class="logo logo-dark" th:src="@{/images/logoDark.png}">
+                    </div>
+                    <h2 class="panel-card-title">Admin Panel</h2>
+                    <p class="user-welcome">Welcome, <span sec:authentication="name"></span></p>
+                </div>
+                <div>
+                    <form id="logout-form" method="post" th:action="@{/logout}">
+                        <input th:name="${_csrf.parameterName}" th:value="${_csrf.token}" type="hidden"/>
+                        <button class="btn panel-action-danger" type="submit">Log Out</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="summary-card">
+                        <h4>Total Users</h4>
+                        <div class="number" id="totalUsers">0</div>
+                        <p>Users registered in the system</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="summary-card">
+                        <h4>Administrators</h4>
+                        <div class="number" id="adminUsers">0</div>
+                        <p>Users with admin role</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="summary-card">
+                        <h4>Standard Users</h4>
+                        <div class="number" id="standardUsers">0</div>
+                        <p>Users with standard role</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="panel-card">
+                        <div class="card-body">
+                            <h5 class="panel-card-title">User Management</h5>
+                            <p>Manage system users, assign roles and permissions.</p>
+                            <a class="btn panel-btn" th:href="@{/admin/users}">Manage Users</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-alert panel-alert-danger" id="errorAlert" role="alert" style="display:none;">
+                Error loading user summary.
+            </div>
+
+            <div class="panel-card-footer-nav">
+                <a href="#!">Terms of use.</a>
+                <a href="#!">Privacy policy</a>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+<script th:src="@{/js/user-summary.js}"></script>
+<script th:src="@{/js/themeLoader.js}"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+</body>
+</html>

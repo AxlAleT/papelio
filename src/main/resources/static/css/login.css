@@ -1,0 +1,177 @@
+/* Base Styles */
+body {
+  font-family: "Karla", sans-serif;
+  min-height: 100vh;
+  background-color: #d9d9d7;
+}
+
+[data-bs-theme="dark"] body {
+  background-color: #181919;
+}
+
+/* Card styling */
+.login-card {
+  border: 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.login-card-img {
+  border-radius: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.login-card .card-body {
+  padding: 3rem;
+}
+
+@media (max-width: 767px) {
+  .login-card .card-body {
+    padding: 2rem;
+  }
+}
+
+.login-card-description {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+[data-bs-theme="dark"] .login-card-description {
+  color: #f8f9fa;
+}
+
+.login-card form {
+  max-width: 100%;
+}
+
+.login-card .form-control {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #ced4da;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+[data-bs-theme="dark"] .login-card .form-control {
+  background-color: #2b3035;
+  border-color: #495057;
+  color: #f8f9fa;
+}
+
+.login-card .login-btn {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.login-card .forgot-password-link {
+  font-size: 0.875rem;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.login-card-footer-text {
+  font-size: 0.875rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.login-card-footer-nav a {
+  font-size: 0.75rem;
+  margin-right: 1rem;
+  color: #6c757d;
+}
+
+[data-bs-theme="dark"] .login-card-footer-nav a {
+  color: #adb5bd;
+}
+
+/* Theme-specific image display */
+.login-image-container,
+.brand-wrapper {
+  position: relative;
+}
+
+.login-image-container {
+  overflow: hidden;
+  min-height: 300px; /* Ensure minimum height even when empty */
+}
+
+.theme-light-image,
+.theme-dark-image,
+.logo-light,
+.logo-dark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.3s ease;
+}
+
+.brand-wrapper {
+  margin-bottom: 2rem;
+  min-height: 37px; /* Ensure logo space is preserved */
+}
+
+.brand-wrapper .logo {
+  position: relative;
+  height: 37px;
+  width: auto;
+  transition: opacity 0.3s ease;
+}
+
+/* Light theme (default) */
+.theme-light-image,
+.logo-light {
+  opacity: 1;
+}
+
+.theme-dark-image,
+.logo-dark {
+  opacity: 0;
+}
+
+/* Dark theme */
+[data-bs-theme="dark"] .theme-light-image,
+[data-bs-theme="dark"] .logo-light {
+  opacity: 0;
+}
+
+[data-bs-theme="dark"] .theme-dark-image,
+[data-bs-theme="dark"] .logo-dark {
+  opacity: 1;
+}
+
+/* Theme toggle styling */
+.theme-toggle-wrapper {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1030;
+}
+
+.theme-toggle-wrapper .dropdown-menu {
+  min-width: 8rem;
+}
+
+.theme-toggle-wrapper .dropdown-item {
+  padding: 0.5rem 1rem;
+}
+
+.theme-toggle-wrapper .dropdown-item i {
+  margin-right: 0.5rem;
+}
+

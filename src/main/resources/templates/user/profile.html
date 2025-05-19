@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html data-bs-theme="light" lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>User Profile</title>
+    <link href="https://fonts.googleapis.com/css?family=Karla:400,700&display=swap" rel="stylesheet">
+    <link href="https://cdn.materialdesignicons.com/4.8.95/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/panel-styles.css}">
+    <link rel="stylesheet" th:href="@{/css/login.css}">
+    <link rel="icon" th:href="@{/images/favicon.ico}" type="image/x-icon">
+</head>
+<body>
+<main class="d-flex align-items-center min-vh-100 py-3 py-md-0">
+    <div class="container">
+        <div class="card login-card panel-card">
+            <div class="row no-gutters">
+                <div class="col-md-5 login-image-container">
+                    <img alt="login" class="login-card-img theme-light-image" th:src="@{/images/login.jpg}">
+                    <img alt="login" class="login-card-img theme-dark-image" th:src="@{/images/loginDark.png}">
+                </div>
+                <div class="col-md-7">
+                    <div class="card-body">
+                        <div class="panel-header">
+                            <div class="brand-wrapper">
+                                <img alt="logo" class="logo logo-light" th:src="@{/images/logo.png}">
+                                <img alt="logo" class="logo logo-dark" th:src="@{/images/logoDark.png}">
+                            </div>
+                            <a class="btn panel-action-secondary" href="/user">Back to Dashboard</a>
+                        </div>
+
+                        <h3 class="login-card-description mb-3">My Profile</h3>
+
+                        <!-- Alert Container -->
+                        <div id="alert-container"></div>
+
+                        <!-- Profile View Section -->
+                        <div class="card mb-4 panel-card" id="profile-view">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="card-title mb-0">Personal Information</h5>
+                                    <button class="btn panel-btn" id="edit-profile-btn" onclick="showEditModal()">
+                                        <i class="mdi mdi-pencil"></i> Edit
+                                    </button>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-sm-3">
+                                        <p class="mb-0 font-weight-bold">Name</p>
+                                    </div>
+                                    <div class="col-sm-9">
+                                        <p class="text-muted mb-0" id="view-name" th:text="${user.name}">User Name</p>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="row">
+                                    <div class="col-sm-3">
+                                        <p class="mb-0 font-weight-bold">Email</p>
+                                    </div>
+                                    <div class="col-sm-9">
+                                        <p class="text-muted mb-0" id="view-email" th:text="${user.email}">
+                                            example@email.com</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <nav class="panel-card-footer-nav">
+                            <a href="#!">Terms of use</a>
+                            <a href="#!">Privacy policy</a>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+
+<!-- Profile Edit Modal -->
+<div aria-hidden="true" aria-labelledby="profileModalLabel" class="modal fade" id="profileModal" role="dialog"
+     tabindex="-1">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content panel-card">
+            <div class="modal-header">
+                <h5 class="modal-title panel-card-title">Edit Profile</h5>
+                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="profile-form">
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input class="form-control" id="name" name="name" required th:value="${user.name}" type="text">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input class="form-control" id="email" name="email" required th:value="${user.email}"
+                               type="email">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">New Password (leave blank to keep current)</label>
+                        <input class="form-control" id="password" name="password" type="password">
+                        <small class="form-text text-muted">Minimum 6 characters</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password-confirm">Confirm Password</label>
+                        <input class="form-control" id="password-confirm" name="passwordConfirm" type="password">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn panel-action-secondary" data-dismiss="modal" type="button">Cancel</button>
+                <button class="btn panel-action-primary" id="save-profile-btn" type="button">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+<script th:src="@{/js/themeManager.js}"></script>
+<script th:src="@{/js/profile.js}"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+
+</body>
+</html>
