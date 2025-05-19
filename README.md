@@ -72,7 +72,7 @@ Papelio is a research platform developed using Spring Boot. It allows users to s
 
 2. **Run using Docker Compose:**
    ```bash
-   docker-compose up
+   docker compose up
    ```
     - Application will be accessible at [http://localhost](http://localhost).
     - PostgreSQL database will be mapped to port 5433.
