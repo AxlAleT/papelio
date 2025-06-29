@@ -1,9 +1,6 @@
 package com.escom.papelio.controller;
 
-import com.escom.papelio.dto.ArticleFavoriteRequestDTO;
-import com.escom.papelio.dto.RecommendationRequestDTO;
-import com.escom.papelio.dto.SearchRequestDTO;
-import com.escom.papelio.dto.SearchResponseDTO;
+import com.escom.papelio.dto.*;
 import com.escom.papelio.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +14,7 @@ import org.springframework.security.core.Authentication;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -57,10 +55,10 @@ public class SearchRestControllerTest {
         searchRequestDTO = new SearchRequestDTO();
         searchRequestDTO.setQuery("machine learning");
         searchRequestDTO.setPage(1);
-        searchRequestDTO.setPageSize(10);
+        searchRequestDTO.setPage(10);
 
         recommendationRequestDTO = new RecommendationRequestDTO();
-        recommendationRequestDTO.setPaperId("paper123");
+        recommendationRequestDTO.setPaperIds(Collections.singletonList("paper123"));
 
         articleFavoriteRequestDTO = new ArticleFavoriteRequestDTO();
         articleFavoriteRequestDTO.setArticleId("article123");
@@ -88,11 +86,11 @@ public class SearchRestControllerTest {
     @Test
     void getRecommendationsShouldReturnRecommendedArticles() {
         // Arrange
-        when(semanticScholarService.getRecommendations(anyString())).thenReturn(searchResponseDTO);
+        recommendationRequestDTO.setLimit(5); // Ensure the limit is set
+        when(semanticScholarService.getRecommendations(any(RecommendationRequestDTO.class))).thenReturn(searchResponseDTO);
 
         // Act
-        ResponseEntity<SearchResponseDTO> response = searchRestController.getRecommendations(
-                recommendationRequestDTO, authentication);
+        ResponseEntity<SearchResponseDTO> response = searchRestController.getRecommendations(authentication);
 
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -102,16 +100,18 @@ public class SearchRestControllerTest {
     @Test
     void getArticleDetailsShouldSaveViewHistoryAndReturnDetails() {
         // Arrange
-        when(articleService.getArticleDetails(anyString())).thenReturn(Collections.emptyMap());
+        ArticleDTO articleDTO = new ArticleDTO(); // Create a mock ArticleDTO object
+        articleDTO.setTitle("Sample Article Title"); // Ensure the title is set
+        when(articleService.getArticleById(anyString())).thenReturn(Optional.of(articleDTO));
 
         // Act
-        ResponseEntity<Map<String, Object>> response = searchRestController.getArticleDetails(
-                "article123", authentication);
+        ResponseEntity<ArticleDTO> response = searchRestController.getArticleById(
+                "article123", anyString(), authentication);
 
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        verify(articleViewHistoryService).saveArticleView(anyString(), anyString());
+        verify(articleViewHistoryService).saveArticleView(anyString(), anyString(), anyString());
     }
 
     @Test
@@ -120,7 +120,7 @@ public class SearchRestControllerTest {
         when(articleFavoriteService.saveArticleFavorite(anyString(), anyString(), anyString())).thenReturn(true);
 
         // Act
-        ResponseEntity<Map<String, Object>> response = searchRestController.addFavorite(
+        ResponseEntity<Map<String, Object>> response = (ResponseEntity<Map<String, Object>>) searchRestController.addArticleToFavorites(
                 articleFavoriteRequestDTO, authentication);
 
         // Assert
@@ -136,7 +136,7 @@ public class SearchRestControllerTest {
         when(articleFavoriteService.saveArticleFavorite(anyString(), anyString(), anyString())).thenReturn(false);
 
         // Act
-        ResponseEntity<Map<String, Object>> response = searchRestController.addFavorite(
+        ResponseEntity<Map<String, Object>> response = (ResponseEntity<Map<String, Object>>) searchRestController.addArticleToFavorites(
                 articleFavoriteRequestDTO, authentication);
 
         // Assert
@@ -152,7 +152,7 @@ public class SearchRestControllerTest {
         when(articleFavoriteService.removeArticleFavorite(anyString(), anyString())).thenReturn(true);
 
         // Act
-        ResponseEntity<Map<String, Object>> response = searchRestController.removeFavorite(
+        ResponseEntity<Map<String, Object>> response = (ResponseEntity<Map<String, Object>>) searchRestController.removeArticleFromFavorites(
                 "article123", authentication);
 
         // Assert
@@ -168,7 +168,7 @@ public class SearchRestControllerTest {
         when(articleFavoriteService.removeArticleFavorite(anyString(), anyString())).thenReturn(false);
 
         // Act
-        ResponseEntity<Map<String, Object>> response = searchRestController.removeFavorite(
+        ResponseEntity<Map<String, Object>> response = (ResponseEntity<Map<String, Object>>) searchRestController.removeArticleFromFavorites(
                 "article123", authentication);
 
         // Assert
@@ -184,7 +184,7 @@ public class SearchRestControllerTest {
         when(articleFavoriteService.isArticleFavorite(anyString(), anyString())).thenReturn(true);
 
         // Act
-        ResponseEntity<Map<String, Object>> response = searchRestController.checkFavorite(
+        ResponseEntity<Map<String, Boolean>> response = searchRestController.checkIfFavorite(
                 "article123", authentication);
 
         // Assert
@@ -199,7 +199,7 @@ public class SearchRestControllerTest {
         when(articleFavoriteService.getUserFavoritesAsDTO(anyString())).thenReturn(searchResponseDTO);
 
         // Act
-        ResponseEntity<SearchResponseDTO> response = searchRestController.getFavorites(authentication);
+        ResponseEntity<SearchResponseDTO> response = searchRestController.getUserFavorites(authentication);
 
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());

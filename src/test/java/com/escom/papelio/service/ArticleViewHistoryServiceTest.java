@@ -119,14 +119,14 @@ public class ArticleViewHistoryServiceTest {
         SearchResponseDTO result = articleViewHistoryService.getMostViewedArticlesAsDTO();
 
         // Assert
-        assertEquals(2, result.getData().size());
-        assertEquals(2, result.getTotal());
-        assertEquals(1, result.getPage());
+        assertEquals(2, result.getArticles().size());
+        assertEquals(2, result.getTotalResults());
+        assertEquals(1, result.getCurrentPage());
         assertEquals(1, result.getTotalPages());
         assertEquals("popular-articles", result.getQuery());
 
         // Check first article data
-        ArticleDTO firstArticle = result.getData().get(0);
+        ArticleDTO firstArticle = result.getArticles().get(0);
         assertEquals(TEST_TITLE, firstArticle.getTitle());
         assertEquals(TEST_ARTICLE_ID, firstArticle.getId());
     }

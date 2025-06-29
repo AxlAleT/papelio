@@ -131,11 +131,11 @@ public class ArticleFavoriteServiceTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals(2, result.getTotal());
-        assertEquals(2, result.getData().size());
-        assertEquals(ARTICLE_ID, result.getData().get(0).getId());
-        assertEquals(ARTICLE_TITLE, result.getData().get(0).getTitle());
-        assertEquals("9876543210", result.getData().get(1).getId());
-        assertEquals("Another Article", result.getData().get(1).getTitle());
+        assertEquals(2, result.getTotalResults());
+        assertEquals(2, result.getArticles().size());
+        assertEquals(ARTICLE_ID, result.getArticles().get(0).getId());
+        assertEquals(ARTICLE_TITLE, result.getArticles().get(0).getTitle());
+        assertEquals("9876543210", result.getArticles().get(1).getId());
+        assertEquals("Another Article", result.getArticles().get(1).getTitle());
     }
 }
