@@ -1,0 +1,365 @@
+@startuml "Deployment Diagram - Papelio System"
+
+!theme plain
+title Papelio Academic Search System - Deployment Diagram
+
+' Define deployment environments
+package "Production Environment" {
+    
+    ' Load Balancer Node
+    node "Load Balancer" as LoadBalancer <<nginx>> {
+        component "Nginx" as Nginx {
+            interface "HTTPS (443)" as HttpsInterface
+            interface "HTTP (80)" as HttpInterface
+            --
+            **Configuration:**
+            - SSL Termination
+            - Rate Limiting (100 req/min/IP)
+            - Static Content Serving
+            - Request Routing
+            - Health Check Endpoints
+            --
+            **Hardware Requirements:**
+            - CPU: 2 vCPUs
+            - RAM: 4 GB
+            - Storage: 20 GB SSD
+            - Network: 1 Gbps
+        }
+    }
+    
+    ' Application Server Cluster
+    node "Application Server 1" as AppServer1 <<Ubuntu 22.04 LTS>> {
+        component "Papelio Application" as PapelioApp1 {
+            interface "HTTP (8080)" as AppInterface1
+            interface "Management (8081)" as MgmtInterface1
+            --
+            **Configuration:**
+            - Spring Boot 3.x
+            - JVM Heap: 2 GB
+            - Connection Pool: 20 connections
+            - Session Timeout: 30 minutes
+            - Cache Size: 512 MB
+            --
+            **Hardware Requirements:**
+            - CPU: 4 vCPUs
+            - RAM: 8 GB
+            - Storage: 50 GB SSD
+            - Network: 1 Gbps
+        }
+        
+        component "JVM Runtime" as JVM1 {
+            --
+            **JVM Settings:**
+            - Java 17 LTS
+            - -Xmx2g -Xms1g
+            - -XX:+UseG1GC
+            - -XX:MaxGCPauseMillis=200
+            - JMX enabled for monitoring
+        }
+    }
+    
+    node "Application Server 2" as AppServer2 <<Ubuntu 22.04 LTS>> {
+        component "Papelio Application" as PapelioApp2 {
+            interface "HTTP (8080)" as AppInterface2
+            interface "Management (8081)" as MgmtInterface2
+            --
+            **Configuration:**
+            - Identical to AppServer1
+            - Stateless design
+            - Shared session storage
+            --
+            **Hardware Requirements:**
+            - CPU: 4 vCPUs
+            - RAM: 8 GB
+            - Storage: 50 GB SSD
+            - Network: 1 Gbps
+        }
+        
+        component "JVM Runtime" as JVM2 {
+            --
+            **JVM Settings:**
+            - Identical to AppServer1
+        }
+    }
+    
+    ' Database Server
+    node "Database Server" as DatabaseServer <<Ubuntu 22.04 LTS>> {
+        component "PostgreSQL" as PostgreSQL {
+            interface "TCP (5432)" as PostgreSQLInterface
+            --
+            **Configuration:**
+            - PostgreSQL 15.x
+            - Max Connections: 200
+            - Shared Buffers: 2 GB
+            - Work Memory: 16 MB
+            - WAL Buffers: 64 MB
+            - Checkpoint Segments: 32
+            --
+            **Hardware Requirements:**
+            - CPU: 8 vCPUs
+            - RAM: 16 GB
+            - Storage: 500 GB SSD (RAID 1)
+            - Network: 10 Gbps
+            --
+            **Backup Strategy:**
+            - Daily full backups
+            - WAL archiving enabled
+            - Point-in-time recovery
+            - Retention: 30 days
+        }
+        
+        database "Papelio Database" as PapelioDB {
+            --
+            **Tables:**
+            - usuarios (users)
+            - search_history
+            - article_view_history
+            - article_favorites
+            --
+            **Indexes:**
+            - B-tree indexes on email, dates
+            - Composite indexes for queries
+            - Full-text search indexes
+        }
+    }
+    
+    ' Cache/Session Server
+    node "Cache Server" as CacheServer <<Ubuntu 22.04 LTS>> {
+        component "Redis" as Redis {
+            interface "TCP (6379)" as RedisInterface
+            --
+            **Configuration:**
+            - Redis 7.x
+            - Max Memory: 4 GB
+            - Eviction Policy: allkeys-lru
+            - Persistence: RDB + AOF
+            - Replication: Master-Slave
+            --
+            **Hardware Requirements:**
+            - CPU: 4 vCPUs
+            - RAM: 8 GB
+            - Storage: 100 GB SSD
+            - Network: 1 Gbps
+            --
+            **Use Cases:**
+            - Session storage
+            - API response caching
+            - Rate limiting counters
+            - Temporary data storage
+        }
+    }
+    
+    ' Monitoring Server
+    node "Monitoring Server" as MonitoringServer <<Ubuntu 22.04 LTS>> {
+        component "Monitoring Stack" as MonitoringStack {
+            interface "HTTP (3000)" as GrafanaInterface
+            interface "HTTP (9090)" as PrometheusInterface
+            --
+            **Components:**
+            - Grafana (Dashboards)
+            - Prometheus (Metrics)
+            - AlertManager (Alerts)
+            - Node Exporter (System metrics)
+            --
+            **Hardware Requirements:**
+            - CPU: 2 vCPUs
+            - RAM: 4 GB
+            - Storage: 200 GB SSD
+            - Network: 1 Gbps
+        }
+        
+        component "Log Aggregation" as LogAggregation {
+            --
+            **Components:**
+            - ELK Stack (Elasticsearch, Logstash, Kibana)
+            - Log retention: 90 days
+            - Real-time log processing
+            - Alert on error patterns
+        }
+    }
+}
+
+' External Services
+cloud "External Academic APIs" as ExternalAPIs {
+    component "Semantic Scholar API" as SemanticScholarExt {
+        interface "HTTPS (443)" as SemanticScholarInterface
+        --
+        **Endpoint:** https://api.semanticscholar.org
+        **Rate Limit:** 100 requests/second
+        **Authentication:** API Key
+        **SLA:** 99.9% uptime
+        **Timeout:** 30 seconds
+    }
+    
+    component "CrossRef API" as CrossRefExt {
+        interface "HTTPS (443)" as CrossRefInterface
+        --
+        **Endpoint:** https://api.crossref.org
+        **Rate Limit:** 50 requests/second
+        **Authentication:** None (Polite Pool with email)
+        **SLA:** 99.5% uptime
+        **Timeout:** 30 seconds
+    }
+    
+    component "ArXiv API" as ArXivExt {
+        interface "HTTPS (443)" as ArXivInterface
+        --
+        **Endpoint:** http://export.arxiv.org/api
+        **Rate Limit:** 3 requests/second
+        **Authentication:** None
+        **SLA:** Best effort
+        **Timeout:** 60 seconds
+    }
+}
+
+' Client Devices
+node "Client Devices" as ClientDevices {
+    component "Web Browsers" as WebBrowsers {
+        interface "HTTPS (443)" as ClientInterface
+        --
+        **Supported Browsers:**
+        - Chrome 90+ 
+        - Firefox 88+
+        - Safari 14+
+        - Edge 90+
+        --
+        **Requirements:**
+        - JavaScript enabled
+        - Cookies enabled
+        - 1 GB RAM minimum
+        - Broadband internet connection
+    }
+    
+    component "Mobile Devices" as MobileDevices {
+        --
+        **Responsive Design:**
+        - iOS 14+ (Safari)
+        - Android 10+ (Chrome)
+        - Progressive Web App ready
+        - Touch-optimized interface
+    }
+}
+
+' Development/Staging Environment
+package "Development Environment" as DevEnvironment {
+    node "Docker Host" as DockerHost <<Docker Desktop>> {
+        component "Docker Compose" as DockerCompose {
+            --
+            **Services:**
+            - app: Papelio application
+            - db: PostgreSQL container
+            - redis: Redis container
+            - nginx: Local load balancer
+            --
+            **Configuration:**
+            - Development profiles active
+            - Hot reload enabled
+            - Debug ports exposed
+            - Test data fixtures loaded
+        }
+        
+        component "Development Database" as DevDB {
+            --
+            **PostgreSQL Container:**
+            - Version: 15-alpine
+            - Port: 5432
+            - Volume mounted for persistence
+            - Test data included
+        }
+        
+        component "Development Cache" as DevCache {
+            --
+            **Redis Container:**
+            - Version: 7-alpine
+            - Port: 6379
+            - No persistence in dev
+            - Flush on restart
+        }
+    }
+}
+
+' Network Connections and Protocols
+LoadBalancer --> AppServer1 : "HTTP/1.1\nLoad Balanced"
+LoadBalancer --> AppServer2 : "HTTP/1.1\nLoad Balanced"
+
+AppServer1 --> DatabaseServer : "TCP/5432\nJDBC Connection Pool"
+AppServer2 --> DatabaseServer : "TCP/5432\nJDBC Connection Pool"
+
+AppServer1 --> CacheServer : "TCP/6379\nRedis Protocol"
+AppServer2 --> CacheServer : "TCP/6379\nRedis Protocol"
+
+AppServer1 --> ExternalAPIs : "HTTPS/443\nREST API Calls"
+AppServer2 --> ExternalAPIs : "HTTPS/443\nREST API Calls"
+
+ClientDevices --> LoadBalancer : "HTTPS/443\nHTTP/2"
+
+MonitoringServer --> AppServer1 : "HTTP/8081\nMetrics Collection"
+MonitoringServer --> AppServer2 : "HTTP/8081\nMetrics Collection"
+MonitoringServer --> DatabaseServer : "TCP/5432\nDB Monitoring"
+MonitoringServer --> CacheServer : "TCP/6379\nCache Monitoring"
+
+' Security and Network Configuration
+note top of LoadBalancer
+**Security Configuration:**
+- SSL/TLS 1.3 only
+- HSTS headers enabled
+- Security headers (CSP, XSS protection)
+- DDoS protection
+- IP whitelisting for admin access
+- Web Application Firewall (WAF)
+end note
+
+note right of DatabaseServer
+**Database Security:**
+- Encrypted connections (SSL)
+- Role-based access control
+- Regular security updates
+- Audit logging enabled
+- Backup encryption
+- Network isolation (private subnet)
+end note
+
+note bottom of AppServer1
+**Application Security:**
+- JVM security manager
+- Regular security scans
+- Dependency vulnerability checks
+- OWASP compliance
+- Secure coding practices
+- Runtime application self-protection
+end note
+
+' Deployment Specifications
+note left of ExternalAPIs
+**API Integration:**
+- Circuit breaker pattern
+- Retry with exponential backoff
+- Request/response logging
+- API key rotation
+- Health check monitoring
+- Failover mechanisms
+end note
+
+' Scalability Considerations
+note bottom of MonitoringServer
+**Scalability Features:**
+- Horizontal scaling ready
+- Auto-scaling based on CPU/memory
+- Database read replicas
+- CDN for static content
+- Redis clustering for cache
+- Microservices migration path
+end note
+
+' Disaster Recovery
+note right of CacheServer
+**Disaster Recovery:**
+- Multi-AZ deployment
+- Automated backups
+- Recovery time objective: 4 hours
+- Recovery point objective: 1 hour
+- Disaster recovery testing quarterly
+- Geographic backup replication
+end note
+
+@enduml

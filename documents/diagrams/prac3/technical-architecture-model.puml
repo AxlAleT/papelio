@@ -1,0 +1,387 @@
+@startuml "Technical Architecture Implementation Model"
+
+!theme plain
+title Papelio - Technical Architecture and Implementation Model
+
+' Define the overall system architecture
+package "Papelio Academic Search System Architecture" {
+    
+    ' Presentation Layer
+    package "Presentation Layer" <<Web Tier>> {
+        
+        component "Web UI" as WebUI {
+            interface "Thymeleaf Templates" as ThymeleafTemplates
+            interface "Static Resources" as StaticResources
+            interface "JavaScript/CSS" as FrontendAssets
+            
+            component "User Interface" as UserUI {
+                portin "Search Forms"
+                portin "Dashboard Pages"
+                portin "Article Details"
+                portin "User Profile"
+            }
+            
+            component "Admin Interface" as AdminUI {
+                portin "User Management"
+                portin "System Analytics"
+                portin "Configuration Panel"
+            }
+        }
+        
+        component "REST API" as RestAPI {
+            interface "JSON API Endpoints" as JsonAPI
+            interface "Authentication Endpoints" as AuthAPI
+            interface "Admin API" as AdminAPI
+            
+            component "API Controllers" as ApiControllers {
+                portin "Search REST Controller"
+                portin "User REST Controller"
+                portin "Admin REST Controller"
+            }
+        }
+        
+        component "MVC Controllers" as MvcControllers {
+            interface "Spring MVC" as SpringMVC
+            
+            component "Web Controllers" as WebControllers {
+                portin "Search Controller"
+                portin "User Controller"
+                portin "Auth Controller"
+                portin "Admin Controller"
+            }
+        }
+    }
+    
+    ' Business Logic Layer
+    package "Business Logic Layer" <<Service Tier>> {
+        
+        component "Core Services" as CoreServices {
+            interface "Service Layer" as ServiceLayer
+            
+            component "Search Services" as SearchServices {
+                portin "Article Search Service"
+                portin "Semantic Scholar Service"
+                portin "Search History Service"
+                portin "Recommendation Engine"
+            }
+            
+            component "User Services" as UserServices {
+                portin "User Service"
+                portin "Authentication Service"
+                portin "Profile Service"
+            }
+            
+            component "Admin Services" as AdminServices {
+                portin "Admin Service"
+                portin "User Management"
+                portin "System Analytics"
+            }
+        }
+        
+        component "Pattern Implementations" as Patterns {
+            interface "Design Patterns" as DesignPatterns
+            
+            component "Strategy Pattern" as StrategyPattern {
+                portin "Search Strategy Context"
+                portin "Provider Strategies"
+                portin "Fallback Mechanisms"
+            }
+            
+            component "Factory Pattern" as FactoryPattern {
+                portin "Response Factories"
+                portin "DTO Builders"
+                portin "Factory Registry"
+            }
+            
+            component "Observer Pattern" as ObserverPattern {
+                portin "Event Publishers"
+                portin "Event Listeners"
+                portin "Audit Trail"
+            }
+        }
+        
+        component "Integration Layer" as IntegrationLayer {
+            interface "External APIs" as ExternalAPIs
+            
+            component "API Clients" as ApiClients {
+                portin "Semantic Scholar Client"
+                portin "CrossRef Client"
+                portin "ArXiv Client"
+            }
+            
+            component "Circuit Breakers" as CircuitBreakers {
+                portin "Provider Health Monitoring"
+                portin "Failover Logic"
+                portin "Rate Limiting"
+            }
+        }
+    }
+    
+    ' Data Access Layer
+    package "Data Access Layer" <<Data Tier>> {
+        
+        component "Repository Layer" as RepositoryLayer {
+            interface "Spring Data JPA" as SpringDataJPA
+            
+            component "JPA Repositories" as JpaRepositories {
+                portin "User Repository"
+                portin "Search History Repository"
+                portin "Favorites Repository"
+                portin "View History Repository"
+            }
+            
+            component "Custom Queries" as CustomQueries {
+                portin "Analytics Queries"
+                portin "Search Optimization"
+                portin "Report Generation"
+            }
+        }
+        
+        component "Data Models" as DataModels {
+            interface "JPA Entities" as JpaEntities
+            
+            component "Domain Entities" as DomainEntities {
+                portin "User Entity"
+                portin "Search History"
+                portin "Article Favorite"
+                portin "Article View History"
+            }
+            
+            component "External Models" as ExternalModels {
+                portin "Semantic Scholar Models"
+                portin "CrossRef Models"
+                portin "ArXiv Models"
+            }
+        }
+        
+        component "Caching Layer" as CachingLayer {
+            interface "Spring Cache" as SpringCache
+            
+            component "Cache Strategies" as CacheStrategies {
+                portin "Search Results Cache"
+                portin "Article Details Cache"
+                portin "User Session Cache"
+            }
+        }
+    }
+    
+    ' Infrastructure Layer
+    package "Infrastructure Layer" <<Infrastructure>> {
+        
+        component "Security Framework" as SecurityFramework {
+            interface "Spring Security" as SpringSecurity
+            
+            component "Authentication" as Authentication {
+                portin "Form-based Auth"
+                portin "Session Management"
+                portin "Password Encoding"
+            }
+            
+            component "Authorization" as Authorization {
+                portin "Role-based Access"
+                portin "Method Security"
+                portin "CSRF Protection"
+            }
+        }
+        
+        component "Configuration Management" as ConfigManagement {
+            interface "Spring Boot Configuration" as SpringBootConfig
+            
+            component "Application Config" as AppConfig {
+                portin "Database Configuration"
+                portin "API Keys Management"
+                portin "Cache Configuration"
+                portin "Security Settings"
+            }
+            
+            component "Profile Management" as ProfileManagement {
+                portin "Development Profile"
+                portin "Production Profile"
+                portin "Test Profile"
+            }
+        }
+        
+        component "Monitoring & Logging" as MonitoringLogging {
+            interface "Observability" as Observability
+            
+            component "Application Monitoring" as AppMonitoring {
+                portin "Health Checks"
+                portin "Metrics Collection"
+                portin "Performance Monitoring"
+            }
+            
+            component "Logging System" as LoggingSystem {
+                portin "Application Logs"
+                portin "Audit Logs"
+                portin "Error Tracking"
+            }
+        }
+    }
+    
+    ' External Systems
+    package "External Systems" <<External>> {
+        
+        component "Academic APIs" as AcademicAPIs {
+            interface "HTTP/REST" as HttpRest
+            
+            component "Semantic Scholar API" as SemanticScholarAPI {
+                portin "Paper Search"
+                portin "Paper Details"
+                portin "Recommendations"
+                portin "Author Information"
+            }
+            
+            component "CrossRef API" as CrossRefAPI {
+                portin "DOI Resolution"
+                portin "Metadata Retrieval"
+                portin "Citation Data"
+            }
+            
+            component "ArXiv API" as ArXivAPI {
+                portin "Preprint Search"
+                portin "Paper Metadata"
+                portin "Category Filtering"
+            }
+        }
+        
+        database "Database Systems" as DatabaseSystems {
+            component "PostgreSQL" as PostgreSQL {
+                portin "User Data"
+                portin "Search History"
+                portin "Favorites"
+                portin "Analytics Data"
+            }
+            
+            component "Redis Cache" as RedisCache {
+                portin "Session Storage"
+                portin "API Response Cache"
+                portin "Rate Limiting Data"
+            }
+        }
+    }
+}
+
+' Technology Stack Specification
+package "Technology Stack" {
+    
+    component "Core Framework" as CoreFramework {
+        portin "Spring Boot 3.4.2"
+        portin "Spring MVC"
+        portin "Spring Security 6.x"
+        portin "Spring Data JPA"
+        portin "Spring Cache"
+        portin "Spring WebFlux (WebClient)"
+        portin "Spring Retry"
+        portin "Thymeleaf with Spring Security extras"
+    }
+    
+    component "Persistence Technologies" as PersistenceTech {
+        portin "Hibernate ORM"
+        portin "PostgreSQL 15+"
+        portin "Caffeine Cache"
+        portin "Redis 7.x (optional)"
+        portin "HikariCP Connection Pool"
+        portin "Jackson JSON Processing"
+    }
+    
+    component "Frontend Technologies" as FrontendTech {
+        portin "Thymeleaf 3.x"
+        portin "Bootstrap 5.x"
+        portin "JavaScript ES6+"
+        portin "jQuery 3.x"
+        portin "Chart.js"
+    }
+    
+    component "Build & DevOps" as BuildDevOps {
+        portin "Maven 3.x"
+        portin "Java 21 LTS"
+        portin "Docker & Docker Compose"
+        portin "JUnit 5"
+        portin "Mockito"
+        portin "Testcontainers"
+        portin "JaCoCo Code Coverage"
+        portin "SonarQube Integration"
+        portin "Resilience4j Circuit Breaker"
+    }
+    
+    component "Monitoring Stack" as MonitoringStack {
+        portin "Spring Boot Actuator"
+        portin "Micrometer Metrics"
+        portin "Logback"
+        portin "SLF4J"
+        portin "Health Check Endpoints"
+        portin "Application Performance Monitoring"
+    }
+}
+
+' Layer Dependencies and Communication
+WebUI --> CoreServices : "Service calls"
+RestAPI --> CoreServices : "Business logic"
+MvcControllers --> CoreServices : "Service layer"
+
+CoreServices --> RepositoryLayer : "Data access"
+CoreServices --> IntegrationLayer : "External APIs"
+Patterns --> CoreServices : "Pattern implementation"
+
+RepositoryLayer --> DataModels : "Entity mapping"
+CachingLayer --> RepositoryLayer : "Cache integration"
+
+SecurityFramework --> WebUI : "Security enforcement"
+SecurityFramework --> RestAPI : "API security"
+ConfigManagement --> CoreServices : "Configuration injection"
+
+IntegrationLayer --> AcademicAPIs : "HTTP/REST calls"
+RepositoryLayer --> DatabaseSystems : "Database operations"
+CachingLayer --> DatabaseSystems : "Cache operations"
+
+' Technology Integration
+CoreFramework --> WebUI : "Framework support"
+CoreFramework --> CoreServices : "Dependency injection"
+CoreFramework --> RepositoryLayer : "Data access framework"
+
+PersistenceTech --> RepositoryLayer : "ORM & Database"
+FrontendTech --> WebUI : "UI components"
+MonitoringStack --> MonitoringLogging : "Observability"
+
+' Quality Attributes Implementation
+note top of SecurityFramework
+**Security Implementation:**
+- BCrypt password hashing
+- CSRF protection enabled
+- Role-based authorization (@PreAuthorize)
+- Session timeout management
+- SQL injection prevention (JPA)
+- XSS protection (Thymeleaf escaping)
+end note
+
+note top of CachingLayer
+**Performance Optimization:**
+- Multi-level caching strategy
+- API response caching (30 min)
+- Database query optimization
+- Connection pooling (HikariCP)
+- Lazy loading for large datasets
+- Pagination for search results
+end note
+
+note top of CircuitBreakers
+**Scalability & Resilience:**
+- Circuit breaker pattern
+- Rate limiting per user/API
+- Horizontal scaling ready
+- Stateless service design
+- Database connection pooling
+- Redis for distributed sessions
+end note
+
+note bottom of MonitoringLogging
+**Observability Features:**
+- Health check endpoints (/actuator/health)
+- Metrics collection (Micrometer)
+- Structured logging (JSON format)
+- Error tracking and alerting
+- Performance monitoring
+- Audit trail for user actions
+end note
+
+@enduml

@@ -1,0 +1,243 @@
+@startuml "Interface and Navigation Model"
+
+!theme plain
+title Papelio - Interface and Navigation Model
+
+' ===== INTERFACE DESIGN SCHEMAS =====
+
+package "Interface Components" {
+    
+    ' Main Layout Components
+    component "Header Navigation" as Header {
+        portin "Logo/Brand"
+        portin "Main Menu"
+        portin "User Profile Dropdown"
+        portin "Search Bar (Global)"
+    }
+    
+    component "Search Interface" as SearchUI {
+        portin "Basic Search Form"
+        portin "Advanced Filters Panel"
+        portin "Search Results Grid"
+        portin "Pagination Controls"
+        portin "Sort Options"
+    }
+    
+    component "Article Components" as ArticleUI {
+        portin "Article Card"
+        portin "Article Details Modal"
+        portin "Favorite Button"
+        portin "View History Indicator"
+        portin "Citation Generator"
+    }
+    
+    component "User Dashboard" as DashboardUI {
+        portin "Search Statistics"
+        portin "Recent Searches Widget"
+        portin "Favorites List"
+        portin "Recommendations Panel"
+        portin "Activity Timeline"
+    }
+    
+    component "Admin Panel" as AdminUI {
+        portin "User Management Table"
+        portin "System Statistics Dashboard"
+        portin "Audit Logs Viewer"
+        portin "Configuration Settings"
+    }
+    
+    component "Authentication" as AuthUI {
+        portin "Login Form"
+        portin "Registration Form"
+        portin "Password Reset"
+        portin "Profile Management"
+    }
+}
+
+' ===== NAVIGATION FLOWS =====
+
+package "Navigation Flows" {
+    
+    ' Public Access Flow
+    state "Public Access" as PublicFlow {
+        state "Landing Page" as Landing
+        state "Article Search" as PublicSearch
+        state "Search Results" as PublicResults
+        state "Login/Register" as Auth
+        
+        Landing --> PublicSearch : "Start searching"
+        PublicSearch --> PublicResults : "View results"
+        PublicResults --> Auth : "Login to save/favorite"
+        Auth --> Landing : "Cancel"
+    }
+    
+    ' Authenticated User Flow
+    state "Authenticated User" as UserFlow {
+        state "User Dashboard" as Dashboard
+        state "Enhanced Search" as EnhancedSearch
+        state "Search Results with Actions" as EnhancedResults
+        state "Article Details" as ArticleDetails
+        state "Favorites Management" as Favorites
+        state "Search History" as History
+        state "Profile Settings" as Profile
+        
+        Dashboard --> EnhancedSearch : "New search"
+        Dashboard --> Favorites : "My favorites"
+        Dashboard --> History : "Search history"
+        Dashboard --> Profile : "User settings"
+        
+        EnhancedSearch --> EnhancedResults : "Search executed"
+        EnhancedResults --> ArticleDetails : "View article"
+        EnhancedResults --> Favorites : "Add to favorites"
+        ArticleDetails --> Favorites : "Save article"
+        
+        EnhancedResults --> Dashboard : "Back to dashboard"
+        Favorites --> Dashboard : "Return home"
+        History --> EnhancedSearch : "Repeat search"
+    }
+    
+    ' Admin Flow
+    state "Administrator" as AdminFlow {
+        state "Admin Dashboard" as AdminDashboard
+        state "User Management" as UserMgmt
+        state "System Analytics" as Analytics
+        state "Audit Logs" as AuditLogs
+        state "System Settings" as Settings
+        
+        AdminDashboard --> UserMgmt : "Manage users"
+        AdminDashboard --> Analytics : "View statistics"
+        AdminDashboard --> AuditLogs : "Check logs"
+        AdminDashboard --> Settings : "Configure system"
+        
+        UserMgmt --> AdminDashboard : "Return to admin home"
+        Analytics --> AdminDashboard : "Back to dashboard"
+    }
+}
+
+' ===== SCREEN WIREFRAMES =====
+
+package "Screen Layouts" {
+    
+    ' Search Interface Layout
+    rectangle "Search Page Layout" as SearchLayout {
+        rectangle "Header\n[Logo | Menu | Profile]" as SearchHeader
+        rectangle "Search Form\n[Query Input | Filters | Submit]" as SearchForm
+        rectangle "Results Area\n[Article Cards | Pagination]" as SearchResults
+        rectangle "Sidebar\n[History | Filters | Recommendations]" as SearchSidebar
+        rectangle "Footer\n[Links | Copyright]" as SearchFooter
+        
+        SearchHeader -down-> SearchForm
+        SearchForm -down-> SearchResults
+        SearchResults -right-> SearchSidebar
+        SearchResults -down-> SearchFooter
+    }
+    
+    ' Dashboard Layout
+    rectangle "Dashboard Layout" as DashboardLayout {
+        rectangle "Navigation Bar\n[Home | Search | Favorites | History | Profile]" as DashNavBar
+        rectangle "Statistics Cards\n[Total Searches | Favorites Count | Recent Activity]" as StatsCards
+        rectangle "Quick Search\n[Search Input | Recent Queries]" as QuickSearch
+        rectangle "Recommendations\n[Suggested Articles | Popular Papers]" as RecommendationsWidget
+        rectangle "Recent Activity\n[Search History | View History]" as ActivityFeed
+        
+        DashNavBar -down-> StatsCards
+        StatsCards -down-> QuickSearch
+        QuickSearch -right-> RecommendationsWidget
+        QuickSearch -down-> ActivityFeed
+        RecommendationsWidget -down-> ActivityFeed
+    }
+    
+    ' Article Details Modal
+    rectangle "Article Modal Layout" as ArticleModal {
+        rectangle "Modal Header\n[Title | Close Button]" as ModalHeader
+        rectangle "Article Metadata\n[Authors | Journal | Date | DOI]" as ArticleMetadata  
+        rectangle "Abstract\n[Full Text | Keywords]" as AbstractSection
+        rectangle "Actions\n[Favorite | Download | Cite | Share]" as ArticleActions
+        rectangle "Related Articles\n[Recommendations | Citations]" as RelatedSection
+        
+        ModalHeader -down-> ArticleMetadata
+        ArticleMetadata -down-> AbstractSection
+        AbstractSection -down-> ArticleActions
+        ArticleActions -down-> RelatedSection
+    }
+    
+    ' Admin Panel Layout
+    rectangle "Admin Panel Layout" as AdminLayout {
+        rectangle "Admin Header\n[Admin Menu | System Status | Logout]" as AdminHeader
+        rectangle "Metrics Dashboard\n[Users | Searches | API Usage]" as MetricsDash
+        rectangle "User Management\n[User Table | Actions | Filters]" as UserMgmtPanel
+        rectangle "System Logs\n[Activity Log | Error Log | Audit Trail]" as LogsPanel
+        
+        AdminHeader -down-> MetricsDash
+        MetricsDash -down-> UserMgmtPanel
+        UserMgmtPanel -down-> LogsPanel
+    }
+}
+
+' ===== ROLE-BASED NAVIGATION =====
+
+package "Role-Based Access" {
+    
+    actor "Anonymous User" as AnonUser
+    actor "Authenticated User" as AuthUser  
+    actor "Administrator" as AdminUser
+    
+    ' Anonymous user access
+    AnonUser --> Landing : "Public access"
+    AnonUser --> PublicSearch : "Limited search"
+    AnonUser --> Auth : "Registration/Login"
+    
+    ' Authenticated user access
+    AuthUser --> Dashboard : "Full dashboard"
+    AuthUser --> EnhancedSearch : "Full search features"
+    AuthUser --> Favorites : "Personal collections"
+    AuthUser --> History : "Search tracking"
+    AuthUser --> Profile : "Account settings"
+    
+    ' Admin user access (inherits user access + admin features)
+    AdminUser --> Dashboard : "User dashboard"
+    AdminUser --> AdminDashboard : "Admin dashboard"
+    AdminUser --> UserMgmt : "User management"
+    AdminUser --> Analytics : "System analytics"
+    AdminUser --> AuditLogs : "Audit trails"
+}
+
+' ===== RESPONSIVE DESIGN CONSIDERATIONS =====
+
+note top of SearchLayout
+**Responsive Design:**
+- Mobile: Collapsible sidebar, stacked layout
+- Tablet: Side-by-side content, touch-friendly buttons
+- Desktop: Full layout with all panels visible
+- Accessibility: ARIA labels, keyboard navigation
+end note
+
+note top of DashboardLayout
+**Interactive Elements:**
+- Real-time search suggestions
+- AJAX-powered content updates
+- Drag-and-drop favorites organization
+- Infinite scroll for activity feeds
+end note
+
+note top of ArticleModal
+**Modal Features:**
+- Keyboard navigation (ESC to close)
+- Focus management for accessibility
+- Mobile-optimized full-screen view
+- Lazy loading for related articles
+end note
+
+' ===== NAVIGATION TRANSITIONS =====
+
+Landing ..> Dashboard : "Login successful"
+PublicSearch ..> EnhancedSearch : "User authentication"
+Auth ..> Dashboard : "Registration/Login complete"
+Dashboard ..> AdminDashboard : "Admin role detected"
+
+' Error and fallback flows
+SearchResults ..> Landing : "Session timeout"
+AdminDashboard ..> Dashboard : "Admin logout/role change"
+ArticleDetails ..> PublicResults : "Authentication lost"
+
+@enduml

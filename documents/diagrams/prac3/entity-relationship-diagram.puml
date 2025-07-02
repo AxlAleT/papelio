@@ -1,0 +1,119 @@
+@startuml "Papelio Entity-Relationship Diagram"
+
+!theme plain
+title Papelio Academic Paper Search System - Entity-Relationship Diagram
+
+' Database Tables
+entity "usuarios" as users {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * email : VARCHAR(255) <<UNIQUE, NOT NULL>>
+    * password : VARCHAR(255) <<NOT NULL>>
+    * name : VARCHAR(255) <<NOT NULL>>
+    role : VARCHAR(50)
+    --
+    Constraints:
+    + UNIQUE(email)
+    + CHECK(email LIKE '%@%')
+    + CHECK(LENGTH(name) >= 2)
+}
+
+entity "search_history" as search_history {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * user_email : VARCHAR(255) <<FK, NOT NULL>>
+    * search_query : VARCHAR(1000) <<NOT NULL>>
+    * search_date : TIMESTAMP <<NOT NULL, DEFAULT CURRENT_TIMESTAMP>>
+    --
+    Foreign Keys:
+    user_email -> usuarios(email)
+    --
+    Indexes:
+    + INDEX(user_email, search_date)
+    + INDEX(search_query) for popular queries
+}
+
+entity "article_view_history" as view_history {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * user_email : VARCHAR(255) <<FK, NOT NULL>>
+    * article_id : VARCHAR(255) <<NOT NULL>>
+    * title : VARCHAR(1000) <<NOT NULL>>
+    * view_date : TIMESTAMP <<NOT NULL, DEFAULT CURRENT_TIMESTAMP>>
+    --
+    Foreign Keys:
+    user_email -> usuarios(email)
+    --
+    Indexes:
+    + INDEX(user_email, view_date)
+    + INDEX(article_id, view_date)
+    + INDEX(view_date) for analytics
+}
+
+entity "article_favorites" as favorites {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * user_email : VARCHAR(255) <<FK, NOT NULL>>
+    * article_id : VARCHAR(255) <<NOT NULL>>
+    * title : VARCHAR(1000) <<NOT NULL>>
+    * favorite_date : TIMESTAMP <<NOT NULL, DEFAULT CURRENT_TIMESTAMP>>
+    --
+    Foreign Keys:
+    user_email -> usuarios(email)
+    --
+    Constraints:
+    + UNIQUE(user_email, article_id)
+    --
+    Indexes:
+    + UNIQUE INDEX(user_email, article_id)
+    + INDEX(user_email, favorite_date)
+}
+
+' Note: Articles are not stored in database - they come from external APIs
+note as article_note
+**Articles (External API Data)**
+Articles are not persisted in the database.
+They are fetched dynamically from:
+- Semantic Scholar API (primary)
+- CrossRef API (fallback)
+
+Article data structure (DTO only):
+- id: String (paperId from API)
+- title: String
+- abstract: String  
+- doi: String
+- authors: List<String>
+- journal: String
+- publicationDate: LocalDate
+- documentType: String
+- language: String
+- citationCount: Integer
+- url: String
+end note
+
+' Relationships
+users ||--o{ search_history : "user_email"
+users ||--o{ view_history : "user_email"  
+users ||--o{ favorites : "user_email"
+
+' Virtual relationships to external article data
+view_history }o--|| article_note : "article_id references\nexternal API data"
+favorites }o--|| article_note : "article_id references\nexternal API data"
+
+' Additional notes for database design
+note top of users : "Main user table\nSupports both regular users and admins\nPassword encrypted with BCrypt"
+
+note right of search_history : "Tracks all user searches\nUsed for:\n- Search history display\n- Popular query analytics\n- Personalization"
+
+note right of view_history : "Records article views\nUsed for:\n- Recommendation engine\n- Usage statistics\n- Popular articles"
+
+note right of favorites : "User's saved articles\nUnique constraint prevents duplicates\nCascade delete on user removal"
+
+' Database constraints and business rules
+note bottom of favorites : "Business Rules:\n- Users can favorite unlimited articles\n- Duplicates automatically prevented\n- Favorites persist across sessions\n- Article titles cached for performance"
+
+note bottom of view_history : "Business Rules:\n- Multiple views of same article allowed\n- Used for recommendation algorithms\n- Tracks view patterns for analytics\n- No duplicate prevention (by design)"
+
+note bottom of search_history : "Business Rules:\n- All searches logged (if authenticated)\n- Used for query suggestions\n- Helps improve search relevance\n- Retention policy: 2 years"
+
+@enduml

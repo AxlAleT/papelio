@@ -1,0 +1,310 @@
+@startuml "Factory Pattern - DTO and Response Factory"
+
+!theme plain
+title Factory Pattern Implementation - DTO and Response Factory
+
+package "Factory Pattern for DTO Creation" {
+    
+    ' Abstract Factory
+    abstract class ResponseFactory <<AbstractFactory>> {
+        + {abstract} createSearchResponse(articles: List<ArticleDTO>, total: long, page: int, query: String): SearchResponseDTO
+        + {abstract} createArticleDTO(source: Object): ArticleDTO
+        + {abstract} createErrorResponse(error: Exception, query: String): SearchResponseDTO
+        + {abstract} createEmptyResponse(query: String): SearchResponseDTO
+        + {abstract} getProviderType(): String
+        --
+        # calculateTotalPages(total: long, pageSize: int): int
+        # validateArticleData(article: ArticleDTO): boolean
+        # sanitizeQuery(query: String): String
+        # createDefaultMetadata(): Map<String, Object>
+    }
+    
+    ' Concrete Factories
+    class SemanticScholarResponseFactory <<ConcreteFactory>> {
+        - mapper: SemanticScholarMapper
+        - {static} PROVIDER_TYPE: String = "SEMANTIC_SCHOLAR"
+        --
+        + SemanticScholarResponseFactory(mapper: SemanticScholarMapper)
+        + createSearchResponse(articles: List<ArticleDTO>, total: long, page: int, query: String): SearchResponseDTO
+        + createArticleDTO(source: Object): ArticleDTO
+        + createErrorResponse(error: Exception, query: String): SearchResponseDTO
+        + createEmptyResponse(query: String): SearchResponseDTO
+        + getProviderType(): String
+        - mapSemanticScholarPaper(paper: SemanticScholarPaper): ArticleDTO
+        - extractAuthors(authors: List<Author>): List<String>
+        - extractDOI(externalIds: ExternalIds): String
+        - formatSemanticScholarDate(year: Integer): LocalDate
+        - enrichWithSemanticScholarMetadata(article: ArticleDTO): ArticleDTO
+    }
+    
+    class CrossRefResponseFactory <<ConcreteFactory>> {
+        - crossRefMapper: CrossRefMapper
+        - {static} PROVIDER_TYPE: String = "CROSSREF"
+        --
+        + CrossRefResponseFactory(crossRefMapper: CrossRefMapper)
+        + createSearchResponse(articles: List<ArticleDTO>, total: long, page: int, query: String): SearchResponseDTO
+        + createArticleDTO(source: Object): ArticleDTO
+        + createErrorResponse(error: Exception, query: String): SearchResponseDTO
+        + createEmptyResponse(query: String): SearchResponseDTO
+        + getProviderType(): String
+        - mapCrossRefWork(work: CrossRefWork): ArticleDTO
+        - extractCrossRefAuthors(authors: List<CrossRefAuthor>): List<String>
+        - parseCrossRefDate(dateArray: int[]): LocalDate
+        - normalizeCrossRefJournal(journal: String): String
+        - enrichWithCrossRefMetadata(article: ArticleDTO): ArticleDTO
+    }
+    
+    class ArxivResponseFactory <<ConcreteFactory>> {
+        - arxivMapper: ArxivMapper
+        - {static} PROVIDER_TYPE: String = "ARXIV"
+        --
+        + ArxivResponseFactory(arxivMapper: ArxivMapper)
+        + createSearchResponse(articles: List<ArticleDTO>, total: long, page: int, query: String): SearchResponseDTO
+        + createArticleDTO(source: Object): ArticleDTO
+        + createErrorResponse(error: Exception, query: String): SearchResponseDTO
+        + createEmptyResponse(query: String): SearchResponseDTO
+        + getProviderType(): String
+        - mapArxivEntry(entry: ArxivEntry): ArticleDTO
+        - extractArxivAuthors(authors: List<ArxivAuthor>): List<String>
+        - parseArxivDate(dateString: String): LocalDate
+        - categorizeArxivSubject(categories: List<String>): String
+        - enrichWithArxivMetadata(article: ArticleDTO): ArticleDTO
+    }
+    
+    ' Factory Registry
+    class ResponseFactoryRegistry <<FactoryRegistry>> {
+        - factories: Map<String, ResponseFactory>
+        --
+        + ResponseFactoryRegistry(factories: List<ResponseFactory>)
+        + getFactory(providerType: String): ResponseFactory
+        + registerFactory(factory: ResponseFactory): void
+        + getAllFactories(): Map<String, ResponseFactory>
+        + getFactoryByProvider(provider: String): Optional<ResponseFactory>
+        + getSupportedProviders(): Set<String>
+        - validateFactory(factory: ResponseFactory): void
+    }
+    
+    ' Supporting Classes for External API Models
+    class CrossRefWork {
+        - doi: String
+        - title: List<String>
+        - author: List<CrossRefAuthor>
+        - containerTitle: List<String>
+        - published: CrossRefDate
+        - type: String
+        - url: String
+        --
+        + getDoi(): String
+        + getTitle(): List<String>
+        + getAuthor(): List<CrossRefAuthor>
+        + getContainerTitle(): List<String>
+        + getPublished(): CrossRefDate
+        + getType(): String
+        + getUrl(): String
+    }
+    
+    class CrossRefAuthor {
+        - given: String
+        - family: String
+        - orcid: String
+        --
+        + getGiven(): String
+        + getFamily(): String
+        + getOrcid(): String
+        + getFullName(): String
+    }
+    
+    class ArxivEntry {
+        - id: String
+        - title: String
+        - summary: String
+        - authors: List<ArxivAuthor>
+        - published: String
+        - updated: String
+        - categories: List<String>
+        - journalRef: String
+        - doi: String
+        --
+        + getId(): String
+        + getTitle(): String
+        + getSummary(): String
+        + getAuthors(): List<ArxivAuthor>
+        + getPublished(): String
+        + getUpdated(): String
+        + getCategories(): List<String>
+        + getJournalRef(): String
+        + getDoi(): String
+    }
+    
+    class ArxivAuthor {
+        - name: String
+        - affiliation: String
+        --
+        + getName(): String
+        + getAffiliation(): String
+    }
+    
+    ' Factory Configuration
+    class FactoryConfig <<Configuration>> {
+        --
+        + semanticScholarResponseFactory(mapper: SemanticScholarMapper): SemanticScholarResponseFactory <<@Bean>>
+        + crossRefResponseFactory(mapper: CrossRefMapper): CrossRefResponseFactory <<@Bean>>
+        + arxivResponseFactory(mapper: ArxivMapper): ArxivResponseFactory <<@Bean>>
+        + responseFactoryRegistry(factories: List<ResponseFactory>): ResponseFactoryRegistry <<@Bean>>
+    }
+    
+    ' Updated Service to use Factory
+    class ArticleDataService <<Service>> {
+        - factoryRegistry: ResponseFactoryRegistry
+        - validationService: ValidationService
+        --
+        + processSearchResponse(providerType: String, rawData: Object, query: String): SearchResponseDTO
+        + processArticleData(providerType: String, rawData: Object): ArticleDTO
+        + handleProviderError(providerType: String, error: Exception, query: String): SearchResponseDTO
+        + getSupportedProviders(): Set<String>
+        - validateProviderSupport(providerType: String): void
+        - enrichResponseWithMetadata(response: SearchResponseDTO, providerType: String): SearchResponseDTO
+    }
+    
+    ' Builder Pattern for Complex DTOs
+    class SearchResponseBuilder <<Builder>> {
+        - articles: List<ArticleDTO>
+        - totalResults: long
+        - currentPage: int
+        - totalPages: int
+        - query: String
+        - metadata: Map<String, Object>
+        - provider: String
+        - timestamp: LocalDateTime
+        --
+        + SearchResponseBuilder()
+        + articles(articles: List<ArticleDTO>): SearchResponseBuilder
+        + totalResults(total: long): SearchResponseBuilder
+        + currentPage(page: int): SearchResponseBuilder
+        + totalPages(pages: int): SearchResponseBuilder
+        + query(query: String): SearchResponseBuilder
+        + metadata(metadata: Map<String, Object>): SearchResponseBuilder
+        + provider(provider: String): SearchResponseBuilder
+        + timestamp(timestamp: LocalDateTime): SearchResponseBuilder
+        + build(): SearchResponseDTO
+        - validate(): void
+    }
+    
+    class ArticleDTOBuilder <<Builder>> {
+        - id: String
+        - title: String
+        - abstract_: String
+        - doi: String
+        - authors: List<String>
+        - journal: String
+        - publicationDate: LocalDate
+        - documentType: String
+        - language: String
+        - citationCount: Integer
+        - url: String
+        - metadata: Map<String, Object>
+        --
+        + ArticleDTOBuilder()
+        + id(id: String): ArticleDTOBuilder
+        + title(title: String): ArticleDTOBuilder
+        + abstract_(abstract_: String): ArticleDTOBuilder
+        + doi(doi: String): ArticleDTOBuilder
+        + authors(authors: List<String>): ArticleDTOBuilder
+        + journal(journal: String): ArticleDTOBuilder
+        + publicationDate(date: LocalDate): ArticleDTOBuilder
+        + documentType(type: String): ArticleDTOBuilder
+        + language(language: String): ArticleDTOBuilder
+        + citationCount(count: Integer): ArticleDTOBuilder
+        + url(url: String): ArticleDTOBuilder
+        + metadata(metadata: Map<String, Object>): ArticleDTOBuilder
+        + build(): ArticleDTO
+        - validate(): void
+        - setDefaults(): void
+    }
+}
+
+' Factory Pattern Relationships
+ResponseFactory <|-- SemanticScholarResponseFactory
+ResponseFactory <|-- CrossRefResponseFactory
+ResponseFactory <|-- ArxivResponseFactory
+
+ResponseFactoryRegistry o-- ResponseFactory : "manages"
+ArticleDataService *-- ResponseFactoryRegistry : "uses"
+
+' Builder relationships
+SearchResponseBuilder ..> SearchResponseDTO : "creates"
+ArticleDTOBuilder ..> ArticleDTO : "creates"
+
+' External model relationships
+CrossRefWork *-- CrossRefAuthor : "contains"
+ArxivEntry *-- ArxivAuthor : "contains"
+
+' Configuration relationships
+FactoryConfig ..> SemanticScholarResponseFactory : "creates"
+FactoryConfig ..> CrossRefResponseFactory : "creates"
+FactoryConfig ..> ArxivResponseFactory : "creates"
+FactoryConfig ..> ResponseFactoryRegistry : "configures"
+
+' Pattern Benefits
+note top of ResponseFactory
+**Factory Pattern Benefits:**
+1. **Encapsulation**: Object creation logic encapsulated
+2. **Flexibility**: Easy to add new providers without changing client code
+3. **Consistency**: Standardized object creation across providers
+4. **Testability**: Mock factories for unit testing
+5. **Single Responsibility**: Each factory handles one provider type
+end note
+
+note right of ResponseFactoryRegistry
+**Registry Pattern Benefits:**
+- Central factory management
+- Runtime factory selection
+- Plugin architecture support
+- Dynamic provider registration
+- Factory validation and error handling
+end note
+
+note bottom of SearchResponseBuilder
+**Builder Pattern Integration:**
+- Fluent interface for complex object creation
+- Validation before object construction
+- Default value assignment
+- Immutable object creation
+- Method chaining for readability
+end note
+
+' Usage Examples
+note left of ArticleDataService
+**Usage Example:**
+```java
+@Service
+public class ArticleDataService {
+    
+    public SearchResponseDTO processResponse(
+            String provider, Object rawData, String query) {
+        
+        ResponseFactory factory = factoryRegistry
+            .getFactory(provider);
+        
+        return factory.createSearchResponse(
+            extractArticles(rawData), 
+            extractTotal(rawData), 
+            extractPage(rawData), 
+            query
+        );
+    }
+}
+```
+end note
+
+' Factory Selection Strategy
+note bottom of ResponseFactoryRegistry
+**Factory Selection Strategy:**
+1. Provider type validation
+2. Factory availability check
+3. Factory capability verification
+4. Error handling for unsupported providers
+5. Fallback factory selection if needed
+end note
+
+@enduml

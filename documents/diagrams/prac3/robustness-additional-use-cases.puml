@@ -1,0 +1,239 @@
+@startuml "Robustness Diagrams - Additional Use Cases"
+
+!theme plain
+
+' ===== USER AUTHENTICATION ROBUSTNESS =====
+!startsub AUTH_ROBUSTNESS
+title User Authentication - Robustness Diagram
+
+actor "User" as User
+
+' Interface Objects
+boundary "Login Form\n<<Web UI>>" as LoginForm
+boundary "Dashboard\n<<Web UI>>" as Dashboard
+boundary "Error Page\n<<Web UI>>" as ErrorPage
+
+' Control Objects
+control "AuthController\n<<MVC Controller>>" as AuthController
+control "AuthenticationManager\n<<Security>>" as AuthManager
+control "UserDetailsService\n<<Security>>" as UserDetailsService
+control "PasswordEncoder\n<<Security>>" as PasswordEncoder
+
+' Entity Objects
+entity "User\n<<Domain Entity>>" as UserEntity
+entity "Authentication\n<<Security Context>>" as AuthContext
+entity "UserDetails\n<<Security>>" as UserDetails
+database "Database\n<<Data Store>>" as Database
+
+' Relationships
+User --> LoginForm : "Enter credentials"
+LoginForm --> AuthController : "Submit login"
+AuthController --> AuthManager : "Authenticate user"
+AuthManager --> UserDetailsService : "Load user details"
+AuthManager --> PasswordEncoder : "Verify password"
+UserDetailsService --> UserEntity : "Retrieve user"
+UserEntity --> Database : "Stored in"
+AuthManager --> AuthContext : "Create session"
+
+alt "Success"
+    AuthController --> Dashboard : "Redirect to dashboard"
+    Dashboard --> User : "Show user interface"
+else "Failure"
+    AuthController --> ErrorPage : "Show error"
+    ErrorPage --> User : "Display error message"
+end
+
+!endsub
+
+' ===== FAVORITES MANAGEMENT ROBUSTNESS =====
+!startsub FAVORITES_ROBUSTNESS
+title Favorites Management - Robustness Diagram
+
+actor "Authenticated User" as User
+
+' Interface Objects
+boundary "Article Card\n<<Web UI>>" as ArticleCard
+boundary "Favorites Button\n<<UI Component>>" as FavButton
+boundary "Favorites Page\n<<Web UI>>" as FavoritesPage
+boundary "REST API\n<<JSON>>" as RestAPI
+
+' Control Objects
+control "SearchRestController\n<<REST Controller>>" as RestController
+control "ArticleFavoriteService\n<<Business Logic>>" as FavoriteService
+control "ValidationService\n<<Input Validation>>" as ValidationService
+
+' Entity Objects
+entity "ArticleFavorite\n<<Domain Entity>>" as FavoriteEntity
+entity "ArticleFavoriteRequestDTO\n<<Data Transfer>>" as FavoriteRequest
+entity "User\n<<Domain Entity>>" as UserEntity
+database "Database\n<<Data Store>>" as Database
+
+' Relationships
+User --> ArticleCard : "Browse articles"
+User --> FavButton : "Click favorite"
+User --> FavoritesPage : "View favorites list"
+
+ArticleCard --> RestController : "Add/remove favorite"
+FavButton --> RestController : "Toggle favorite status"
+FavoritesPage --> RestController : "Get favorites list"
+RestAPI --> RestController : "Process requests"
+
+RestController --> ValidationService : "Validate request"
+RestController --> FavoriteService : "Manage favorites"
+FavoriteService --> FavoriteEntity : "Create/delete"
+FavoriteEntity --> UserEntity : "Belongs to"
+FavoriteEntity --> Database : "Persisted in"
+
+FavoriteService --> RestController : "Return status"
+RestController --> RestAPI : "JSON response"
+RestAPI --> User : "Update UI"
+
+!endsub
+
+' ===== SEARCH HISTORY ROBUSTNESS =====
+!startsub HISTORY_ROBUSTNESS
+title Search History - Robustness Diagram
+
+actor "Authenticated User" as User
+
+' Interface Objects
+boundary "Search Form\n<<Web UI>>" as SearchForm
+boundary "History Page\n<<Web UI>>" as HistoryPage
+boundary "History Sidebar\n<<UI Component>>" as HistorySidebar
+
+' Control Objects
+control "SearchRestController\n<<REST Controller>>" as RestController
+control "SearchHistoryService\n<<Business Logic>>" as HistoryService
+control "SecurityContextHolder\n<<Security>>" as SecurityContext
+
+' Entity Objects
+entity "SearchHistory\n<<Domain Entity>>" as HistoryEntity
+entity "SearchRequestDTO\n<<Data Transfer>>" as SearchRequest
+entity "User\n<<Domain Entity>>" as UserEntity
+database "Database\n<<Data Store>>" as Database
+
+' Relationships
+User --> SearchForm : "Perform search"
+User --> HistoryPage : "View search history"
+User --> HistorySidebar : "Quick history access"
+
+SearchForm --> RestController : "Submit search"
+HistoryPage --> RestController : "Get history"
+HistorySidebar --> RestController : "Fetch recent searches"
+
+RestController --> SecurityContext : "Get current user"
+RestController --> HistoryService : "Save/retrieve history"
+HistoryService --> HistoryEntity : "Create/query"
+HistoryEntity --> UserEntity : "Belongs to"
+HistoryEntity --> Database : "Persisted in"
+
+HistoryService --> RestController : "Return history data"
+RestController --> HistoryPage : "Display history"
+RestController --> HistorySidebar : "Show recent searches"
+
+!endsub
+
+' ===== RECOMMENDATIONS ROBUSTNESS =====
+!startsub RECOMMENDATIONS_ROBUSTNESS
+title Recommendations Engine - Robustness Diagram
+
+actor "User" as User
+
+' Interface Objects
+boundary "Recommendations Panel\n<<Web UI>>" as RecommendationsPanel
+boundary "Dashboard Widget\n<<UI Component>>" as DashboardWidget
+boundary "API Response\n<<JSON>>" as APIResponse
+
+' Control Objects
+control "SearchRestController\n<<REST Controller>>" as RestController
+control "ArticleViewHistoryService\n<<Business Logic>>" as ViewHistoryService
+control "SemanticScholarService\n<<Business Logic>>" as ScholarService
+control "RecommendationEngine\n<<Algorithm>>" as RecommendationEngine
+
+' Entity Objects
+entity "ArticleViewHistory\n<<Domain Entity>>" as ViewHistoryEntity
+entity "RecommendationRequestDTO\n<<Data Transfer>>" as RecommendationRequest
+entity "SearchResponseDTO\n<<Data Transfer>>" as SearchResponse
+entity "User\n<<Domain Entity>>" as UserEntity
+database "Database\n<<Data Store>>" as Database
+control "External API\n<<Semantic Scholar>>" as ExternalAPI
+
+' Relationships
+User --> RecommendationsPanel : "View recommendations"
+User --> DashboardWidget : "See suggested articles"
+
+RecommendationsPanel --> RestController : "Get recommendations"
+DashboardWidget --> RestController : "Fetch suggestions"
+
+RestController --> ViewHistoryService : "Get user history"
+ViewHistoryService --> ViewHistoryEntity : "Query view history"
+ViewHistoryEntity --> UserEntity : "Belongs to"
+ViewHistoryEntity --> Database : "Stored in"
+
+RestController --> RecommendationEngine : "Generate recommendations"
+RecommendationEngine --> ScholarService : "Fetch related articles"
+ScholarService --> ExternalAPI : "API call"
+ExternalAPI --> ScholarService : "Related papers"
+
+ScholarService --> RecommendationRequest : "Process request"
+ScholarService --> SearchResponse : "Build response"
+RestController --> APIResponse : "Return recommendations"
+APIResponse --> User : "Display suggestions"
+
+!endsub
+
+' ===== ADMIN MANAGEMENT ROBUSTNESS =====
+!startsub ADMIN_ROBUSTNESS
+title Admin User Management - Robustness Diagram
+
+actor "Administrator" as Admin
+
+' Interface Objects
+boundary "Admin Dashboard\n<<Web UI>>" as AdminDashboard
+boundary "User Management Table\n<<Web UI>>" as UserTable
+boundary "Confirmation Dialog\n<<UI Component>>" as ConfirmDialog
+
+' Control Objects
+control "AdminController\n<<MVC Controller>>" as AdminController
+control "AdminService\n<<Business Logic>>" as AdminService
+control "UserService\n<<Business Logic>>" as UserService
+control "SecurityService\n<<Authorization>>" as SecurityService
+
+' Entity Objects
+entity "User\n<<Domain Entity>>" as UserEntity
+entity "SearchHistory\n<<Domain Entity>>" as HistoryEntity
+entity "ArticleFavorite\n<<Domain Entity>>" as FavoriteEntity
+entity "ArticleViewHistory\n<<Domain Entity>>" as ViewEntity
+database "Database\n<<Data Store>>" as Database
+
+' Relationships
+Admin --> AdminDashboard : "Access admin panel"
+Admin --> UserTable : "Manage users"
+Admin --> ConfirmDialog : "Confirm actions"
+
+AdminDashboard --> AdminController : "Admin requests"
+UserTable --> AdminController : "User operations"
+ConfirmDialog --> AdminController : "Confirmed actions"
+
+AdminController --> SecurityService : "@PreAuthorize check"
+AdminController --> AdminService : "Admin operations"
+AdminService --> UserService : "User management"
+
+UserService --> UserEntity : "CRUD operations"
+UserEntity --> Database : "Stored in"
+
+' Cascade relationships
+UserEntity --> HistoryEntity : "Owns search history"
+UserEntity --> FavoriteEntity : "Owns favorites"
+UserEntity --> ViewEntity : "Owns view history"
+
+HistoryEntity --> Database : "Cascade delete"
+FavoriteEntity --> Database : "Cascade delete"  
+ViewEntity --> Database : "Cascade delete"
+
+AdminService --> AdminController : "Operation result"
+AdminController --> AdminDashboard : "Update admin view"
+
+!endsub
+
+@enduml

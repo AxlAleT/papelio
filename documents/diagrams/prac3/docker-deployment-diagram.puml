@@ -1,0 +1,262 @@
+@startuml "Docker Deployment - Papelio System"
+
+!theme plain
+title Papelio Academic Search System - Docker Deployment Diagram
+
+' Docker Environment
+package "Docker Environment" {
+    
+    ' Docker Host
+    node "Docker Host" as DockerHost <<Linux Server>> {
+        
+        ' Application Container
+        component "Papelio Application Container" as AppContainer <<Docker Container>> {
+            interface "HTTP (8080)" as AppPort
+            interface "Management (8081)" as MgmtPort
+            --
+            **Image:** papelio:latest
+            **Base Image:** openjdk:21-jre-slim
+            **Memory:** 2 GB
+            **CPU:** 2 cores
+            **Volumes:**
+            - ./logs:/app/logs
+            - ./config:/app/config
+            --
+            **Environment Variables:**
+            - SPRING_PROFILES_ACTIVE=prod
+            - DB_HOST=postgresql
+            - DB_PORT=5432
+            - DB_NAME=papelio
+            - REDIS_HOST=redis
+            - REDIS_PORT=6379
+            --
+            **Health Check:**
+            - Endpoint: /actuator/health
+            - Interval: 30s
+            - Timeout: 10s
+            - Retries: 3
+        }
+        
+        ' Database Container
+        component "PostgreSQL Container" as PostgreSQLContainer <<Docker Container>> {
+            interface "TCP (5432)" as DBPort
+            interface "TCP (5433)" as DBExternalPort
+            --
+            **Image:** postgres:15-alpine
+            **Memory:** 1 GB
+            **CPU:** 1 core
+            **Volumes:**
+            - ./postgres-data:/var/lib/postgresql/data
+            - ./postgres-init:/docker-entrypoint-initdb.d
+            --
+            **Environment Variables:**
+            - POSTGRES_DB=papelio
+            - POSTGRES_USER=papelio_user
+            - POSTGRES_PASSWORD=secure_password
+            --
+            **Port Mapping:**
+            - Host: 5433 → Container: 5432
+            --
+            **Persistence:**
+            - Data volume mounted
+            - Automatic backups via cron
+        }
+        
+        ' Cache Container (Optional)
+        component "Redis Container" as RedisContainer <<Docker Container>> {
+            interface "TCP (6379)" as RedisPort
+            --
+            **Image:** redis:7-alpine
+            **Memory:** 512 MB
+            **CPU:** 0.5 cores
+            **Volumes:**
+            - ./redis-data:/data
+            - ./redis.conf:/etc/redis/redis.conf
+            --
+            **Configuration:**
+            - Persistence: RDB + AOF
+            - Max Memory: 400MB
+            - Eviction Policy: allkeys-lru
+            --
+            **Use Cases:**
+            - Session storage
+            - API response caching
+            - Rate limiting
+        }
+        
+        ' Reverse Proxy Container
+        component "Nginx Container" as NginxContainer <<Docker Container>> {
+            interface "HTTP (80)" as HttpPort
+            interface "HTTPS (443)" as HttpsPort
+            --
+            **Image:** nginx:alpine
+            **Memory:** 256 MB
+            **CPU:** 0.5 cores
+            **Volumes:**
+            - ./nginx.conf:/etc/nginx/nginx.conf
+            - ./ssl:/etc/nginx/ssl
+            - ./static:/usr/share/nginx/html/static
+            --
+            **Configuration:**
+            - SSL termination
+            - Load balancing
+            - Static file serving
+            - Request routing
+            - Rate limiting
+            --
+            **Port Mapping:**
+            - Host: 80 → Container: 80
+            - Host: 443 → Container: 443
+        }
+    }
+    
+    ' Docker Compose Configuration
+    component "Docker Compose" as DockerCompose {
+        --
+        **Services Defined:**
+        - papelio-app
+        - postgresql
+        - redis (optional)
+        - nginx
+        --
+        **Networks:**
+        - papelio-network (bridge)
+        --
+        **Volumes:**
+        - postgres-data
+        - redis-data
+        - app-logs
+        --
+        **Environment Files:**
+        - .env (production secrets)
+        - .env.local (development overrides)
+    }
+}
+
+' Development Environment
+package "Development Environment" {
+    
+    node "Developer Machine" as DevMachine <<Local Machine>> {
+        
+        component "Papelio Dev Container" as DevContainer <<Docker Container>> {
+            interface "HTTP (8080)" as DevAppPort
+            interface "Debug (5005)" as DebugPort
+            --
+            **Image:** papelio:dev
+            **Base Image:** openjdk:21-jdk
+            **Memory:** 1 GB
+            **CPU:** 1 core
+            **Volumes:**
+            - ./src:/app/src (live reload)
+            - ./target:/app/target
+            - ~/.m2:/root/.m2 (Maven cache)
+            --
+            **Environment Variables:**
+            - SPRING_PROFILES_ACTIVE=dev
+            - DEBUG=true
+            - JAVA_TOOL_OPTIONS=-agentlib:jdwp=...
+            --
+            **Features:**
+            - Hot reload with Spring Boot DevTools
+            - Remote debugging enabled
+            - H2 in-memory database
+        }
+        
+        component "H2 Database" as H2DB <<In-Memory>> {
+            interface "TCP (9092)" as H2Port
+            --
+            **Configuration:**
+            - In-memory mode
+            - Web console enabled
+            - Test data pre-loaded
+            - Auto-reset on restart
+        }
+    }
+}
+
+' External Services (unchanged in Docker)
+cloud "External Academic APIs" as ExternalAPIs {
+    component "Semantic Scholar API" as SemanticScholarExt {
+        interface "HTTPS (443)" as SemanticScholarInterface
+        --
+        **Endpoint:** https://api.semanticscholar.org
+        **Rate Limit:** 100 requests/second
+        **Authentication:** API Key
+    }
+    
+    component "CrossRef API" as CrossRefExt {
+        interface "HTTPS (443)" as CrossRefInterface
+        --
+        **Endpoint:** https://api.crossref.org
+        **Rate Limit:** 50 requests/second
+        **Authentication:** Email-based polite pool
+    }
+}
+
+' Container Communication
+AppContainer --> PostgreSQLContainer : "Database Connection\n(Internal Network)"
+AppContainer --> RedisContainer : "Cache Connection\n(Internal Network)"
+NginxContainer --> AppContainer : "Reverse Proxy\n(Internal Network)"
+
+' External Communication
+NginxContainer --> ExternalAPIs : "HTTPS API Calls"
+AppContainer --> ExternalAPIs : "Direct API Calls\n(if no proxy)"
+
+' Development Connections
+DevContainer --> H2DB : "JDBC Connection"
+DevContainer --> ExternalAPIs : "HTTPS API Calls"
+
+' Docker Compose Management
+DockerCompose ..> AppContainer : "orchestrates"
+DockerCompose ..> PostgreSQLContainer : "orchestrates"
+DockerCompose ..> RedisContainer : "orchestrates"
+DockerCompose ..> NginxContainer : "orchestrates"
+
+' Deployment Notes
+note top of DockerCompose
+**Docker Compose Commands:**
+- docker-compose up -d (start all services)
+- docker-compose down (stop all services)
+- docker-compose logs -f papelio-app (view logs)
+- docker-compose exec papelio-app bash (shell access)
+- docker-compose pull (update images)
+end note
+
+note bottom of AppContainer
+**Container Build Process:**
+1. ./mvnw clean package -DskipTests
+2. docker build -t papelio .
+3. Multi-stage build:
+   - Build stage: Maven + OpenJDK 21 JDK
+   - Runtime stage: OpenJDK 21 JRE
+   - Optimized layers for caching
+end note
+
+note right of PostgreSQLContainer
+**Database Persistence:**
+- Data persisted in Docker volume
+- Automatic initialization scripts
+- Regular backups to host filesystem
+- Easy migration between environments
+end note
+
+note left of NginxContainer
+**Reverse Proxy Features:**
+- SSL/TLS termination
+- HTTP/2 support
+- Gzip compression
+- Static file caching
+- Security headers
+- Rate limiting per IP
+end note
+
+' Resource Requirements
+note top of DockerHost
+**System Requirements:**
+- **Minimum:** 4 GB RAM, 2 CPU cores, 20 GB storage
+- **Recommended:** 8 GB RAM, 4 CPU cores, 50 GB storage
+- **Docker:** 20.10+ with Docker Compose 2.0+
+- **OS:** Linux (Ubuntu 20.04+), macOS, Windows with WSL2
+end note
+
+@enduml

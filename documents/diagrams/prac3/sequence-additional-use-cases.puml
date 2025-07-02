@@ -1,0 +1,239 @@
+@startuml "Sequence Diagrams - Additional Use Cases"
+
+!theme plain
+
+' ===== USER AUTHENTICATION =====
+!startsub AUTHENTICATION
+title User Authentication - Sequence Diagram
+
+actor User
+participant "LoginController" as LoginCtrl
+participant "AuthenticationManager" as AuthMgr
+participant "UserDetailsService" as UserService
+participant "PasswordEncoder" as PwdEncoder
+database "Database" as DB
+
+User -> LoginCtrl : POST /login\n{email, password}
+activate LoginCtrl
+
+LoginCtrl -> AuthMgr : authenticate(authToken)
+activate AuthMgr
+
+AuthMgr -> UserService : loadUserByUsername(email)
+activate UserService
+UserService -> DB : findByEmail(email)
+activate DB
+DB --> UserService : User entity
+deactivate DB
+UserService --> AuthMgr : UserDetails
+deactivate UserService
+
+AuthMgr -> PwdEncoder : matches(rawPassword, encodedPassword)
+activate PwdEncoder
+PwdEncoder --> AuthMgr : boolean result
+deactivate PwdEncoder
+
+alt Authentication Success
+    AuthMgr --> LoginCtrl : Authentication object
+    LoginCtrl -> LoginCtrl : SecurityContextHolder.setAuthentication()
+    LoginCtrl --> User : redirect:/user/dashboard
+else Authentication Failure
+    AuthMgr --> LoginCtrl : AuthenticationException
+    LoginCtrl --> User : redirect:/login?error
+end
+deactivate AuthMgr
+deactivate LoginCtrl
+
+!endsub
+
+' ===== FAVORITES MANAGEMENT =====
+!startsub FAVORITES
+title Favorites Management - Sequence Diagram
+
+actor User
+participant "SearchRestController" as RestCtrl
+participant "ArticleFavoriteService" as FavService
+database "Database" as DB
+
+== Add to Favorites ==
+User -> RestCtrl : POST /api/search/favorite\n{articleId, title}
+activate RestCtrl
+
+RestCtrl -> RestCtrl : validate Authentication
+RestCtrl -> FavService : saveArticleFavorite(userEmail, articleId, title)
+activate FavService
+
+FavService -> FavService : check if already exists
+alt Not already favorite
+    FavService -> FavService : new ArticleFavorite()
+    FavService -> DB : save(favorite)
+    activate DB
+    DB --> FavService : saved entity
+    deactivate DB
+    FavService --> RestCtrl : true (added)
+else Already favorite
+    FavService --> RestCtrl : false (duplicate)
+end
+deactivate FavService
+
+RestCtrl --> User : 201 Created or 200 OK
+deactivate RestCtrl
+
+== Remove from Favorites ==
+User -> RestCtrl : DELETE /api/search/favorite/{articleId}
+activate RestCtrl
+
+RestCtrl -> FavService : removeArticleFavorite(userEmail, articleId)
+activate FavService
+FavService -> DB : deleteByUserEmailAndArticleId()
+activate DB
+DB --> FavService : deletion result
+deactivate DB
+FavService --> RestCtrl : boolean (removed/not found)
+deactivate FavService
+
+alt Successfully removed
+    RestCtrl --> User : 200 OK
+else Not found
+    RestCtrl --> User : 404 Not Found
+end
+deactivate RestCtrl
+
+!endsub
+
+' ===== RECOMMENDATIONS =====
+!startsub RECOMMENDATIONS
+title Recommendations Engine - Sequence Diagram
+
+actor User
+participant "SearchRestController" as RestCtrl
+participant "ArticleViewHistoryService" as ViewService
+participant "SemanticScholarService" as ScholarService
+participant "SemanticScholarApiClient" as ApiClient
+control "Semantic Scholar API" as API
+
+User -> RestCtrl : GET /api/search/recommendations
+activate RestCtrl
+
+RestCtrl -> ViewService : getUserViewedArticleIds(userEmail, 20)
+activate ViewService
+ViewService -> ViewService : query recent viewed articles
+ViewService --> RestCtrl : List<String> articleIds
+deactivate ViewService
+
+alt Has view history
+    RestCtrl -> RestCtrl : new RecommendationRequestDTO(articleIds, 20)
+    RestCtrl -> ScholarService : getRecommendations(request)
+    activate ScholarService
+    
+    ScholarService -> ApiClient : getRecommendations(articleIds)
+    activate ApiClient
+    ApiClient -> API : POST /graph/v1/paper/batch\n{papers: articleIds}
+    activate API
+    API --> ApiClient : recommendations response
+    deactivate API
+    ApiClient --> ScholarService : recommended papers
+    deactivate ApiClient
+    
+    ScholarService -> ScholarService : map to ArticleDTO list
+    ScholarService --> RestCtrl : SearchResponseDTO
+    deactivate ScholarService
+    
+    RestCtrl --> User : 200 OK\nrecommendations
+else No view history
+    RestCtrl --> User : 200 OK\nempty recommendations
+end
+deactivate RestCtrl
+
+!endsub
+
+' ===== SEARCH HISTORY =====
+!startsub SEARCH_HISTORY
+title Search History Tracking - Sequence Diagram
+
+actor User
+participant "SearchRestController" as RestCtrl
+participant "SearchHistoryService" as HistoryService
+database "Database" as DB
+
+== Save Search History ==
+note over RestCtrl : This happens automatically\nduring any search request
+
+RestCtrl -> RestCtrl : check if user authenticated
+opt User authenticated
+    RestCtrl -> HistoryService : saveSearchQuery(userEmail, query)
+    activate HistoryService
+    HistoryService -> HistoryService : new SearchHistory(userEmail, query, now())
+    HistoryService -> DB : save(searchHistory)
+    activate DB
+    DB --> HistoryService : saved entity
+    deactivate DB
+    deactivate HistoryService
+end
+
+== Retrieve Search History ==
+User -> RestCtrl : GET /api/search/history
+activate RestCtrl
+
+RestCtrl -> HistoryService : getUserSearchHistory(userEmail)
+activate HistoryService
+HistoryService -> DB : findByUserEmailOrderBySearchDateDesc(userEmail)
+activate DB
+DB --> HistoryService : List<SearchHistory>
+deactivate DB
+HistoryService --> RestCtrl : search history list
+deactivate HistoryService
+
+RestCtrl --> User : 200 OK\nsearch history
+deactivate RestCtrl
+
+!endsub
+
+' ===== ADMIN USER MANAGEMENT =====
+!startsub ADMIN_MANAGEMENT
+title Admin User Management - Sequence Diagram
+
+actor Admin
+participant "AdminController" as AdminCtrl
+participant "AdminService" as AdminService
+participant "UserService" as UserService
+database "Database" as DB
+
+== View All Users ==
+Admin -> AdminCtrl : GET /admin/users
+activate AdminCtrl
+
+AdminCtrl -> AdminCtrl : @PreAuthorize("hasRole('ADMIN')")
+AdminCtrl -> AdminService : getAllUsers()
+activate AdminService
+AdminService -> DB : findAll()
+activate DB
+DB --> AdminService : List<User>
+deactivate DB
+AdminService --> AdminCtrl : users list
+deactivate AdminService
+
+AdminCtrl --> Admin : admin/users view
+deactivate AdminCtrl
+
+== Delete User ==
+Admin -> AdminCtrl : DELETE /admin/api/users/{id}
+activate AdminCtrl
+
+AdminCtrl -> AdminCtrl : validate admin role
+AdminCtrl -> UserService : deleteUser(userId)
+activate UserService
+UserService -> DB : deleteById(userId)
+activate DB
+note over DB : Cascading delete removes:\n- search_history\n- article_view_history\n- article_favorites
+DB --> UserService : deletion confirmed
+deactivate DB
+UserService --> AdminCtrl : success
+deactivate UserService
+
+AdminCtrl --> Admin : 200 OK
+deactivate AdminCtrl
+
+!endsub
+
+@enduml

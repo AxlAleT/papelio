@@ -1,0 +1,136 @@
+@startuml "Robustness Diagram - Basic Article Search"
+
+!theme plain
+title Basic Article Search - Robustness Diagram
+
+' Actor
+actor "User\n(Student/Researcher)" as User
+
+' Interface Objects (Boundary)
+boundary "Search Form\n<<Web UI>>" as SearchForm
+boundary "Search Results Page\n<<Web UI>>" as ResultsPage
+boundary "Article Details Modal\n<<Web UI>>" as ArticleModal
+boundary "REST API Endpoints\n<<JSON>>" as RestAPI
+boundary "External API\n<<Semantic Scholar>>" as ExternalAPI
+
+' Control Objects
+control "SearchController\n<<MVC Controller>>" as SearchController
+control "SearchRestController\n<<REST Controller>>" as RestController
+control "SemanticScholarService\n<<Business Logic>>" as SearchService
+control "SearchHistoryService\n<<Business Logic>>" as HistoryService
+control "ArticleViewHistoryService\n<<Business Logic>>" as ViewService
+control "SemanticScholarMapper\n<<Data Mapper>>" as Mapper
+control "CacheManager\n<<Caching>>" as CacheManager
+control "ValidationService\n<<Input Validation>>" as ValidationService
+
+' Entity Objects
+entity "SearchRequestDTO\n<<Data Transfer>>" as SearchRequest
+entity "SearchResponseDTO\n<<Data Transfer>>" as SearchResponse
+entity "ArticleDTO\n<<Data Transfer>>" as ArticleDTO
+entity "SearchHistory\n<<Domain Entity>>" as SearchHistoryEntity
+entity "ArticleViewHistory\n<<Domain Entity>>" as ViewHistoryEntity
+entity "User\n<<Domain Entity>>" as UserEntity
+entity "SemanticScholarPaper\n<<External Model>>" as ExternalPaper
+entity "Cache\n<<Data Store>>" as Cache
+entity "Database\n<<Data Store>>" as Database
+
+' User interactions with interface objects
+User --> SearchForm : "Enter search query\nand filters"
+User --> ResultsPage : "Browse search results"
+User --> ArticleModal : "View article details"
+
+' Interface to Control connections
+SearchForm --> SearchController : "Submit search form"
+ResultsPage --> RestController : "AJAX search request"
+ArticleModal --> RestController : "Get article details"
+RestAPI --> RestController : "Process API requests"
+
+' Control to Control connections
+SearchController --> SearchService : "Delegate search logic"
+RestController --> SearchService : "Perform search"
+RestController --> HistoryService : "Save search history"
+RestController --> ViewService : "Track article views"
+SearchService --> Mapper : "Transform data"
+SearchService --> CacheManager : "Check/store cache"
+RestController --> ValidationService : "Validate input"
+
+' Control to Entity connections
+SearchController --> SearchRequest : "Create/validate"
+SearchService --> SearchResponse : "Build response"
+SearchService --> ArticleDTO : "Create article data"
+HistoryService --> SearchHistoryEntity : "Create/persist"
+ViewService --> ViewHistoryEntity : "Create/persist"
+Mapper --> ExternalPaper : "Map from API"
+
+' Control to External connections
+SearchService --> ExternalAPI : "Fetch article data"
+
+' Entity to Entity connections
+SearchRequest --> SearchResponse : "Input for processing"
+ExternalPaper --> ArticleDTO : "Transformed to"
+SearchHistoryEntity --> UserEntity : "Belongs to"
+ViewHistoryEntity --> UserEntity : "Belongs to"
+
+' Entity to Data Store connections
+SearchHistoryEntity --> Database : "Persisted in"
+ViewHistoryEntity --> Database : "Persisted in"
+UserEntity --> Database : "Stored in"
+SearchResponse --> Cache : "Cached in"
+ArticleDTO --> Cache : "Cached in"
+
+' Return flows from interface objects
+SearchForm --> User : "Display form validation\nand initial state"
+ResultsPage --> User : "Show search results\nand pagination"
+ArticleModal --> User : "Present article details\nand metadata"
+
+' Notes for object classifications
+note top of SearchForm
+**Interface Objects (Boundary)**
+- Handle user interactions
+- Present data to users
+- Capture user input
+- Web forms, pages, APIs
+end note
+
+note top of SearchController
+**Control Objects**
+- Coordinate between boundary and entity
+- Implement business logic
+- Handle workflows and processes
+- Manage transactions and validation
+end note
+
+note top of SearchRequest
+**Entity Objects**
+- Represent domain concepts
+- Hold data and state
+- Persist information
+- Domain models and DTOs
+end note
+
+' Interaction flows with stereotypes
+SearchForm ..> SearchController : <<submit>>
+ResultsPage ..> RestController : <<async request>>
+SearchController ..> SearchService : <<delegate>>
+SearchService ..> ExternalAPI : <<external call>>
+SearchService ..> Cache : <<cache lookup>>
+HistoryService ..> Database : <<persist>>
+
+' Additional robustness constraints
+note bottom of Database
+**Data Persistence Rules:**
+- Only authenticated users get history tracking
+- Search results cached for 30 minutes
+- Article details cached for 1 hour
+- Failed API calls result in empty responses
+end note
+
+note bottom of ExternalAPI
+**External Integration Rules:**
+- Rate limiting applied (100 req/hour)
+- Timeout handling (5 seconds)
+- Fallback to cached data on failure
+- Circuit breaker pattern for resilience
+end note
+
+@enduml

@@ -1,0 +1,176 @@
+@startuml "Sequence Diagram - Basic Article Search (Main Use Case)"
+
+!theme plain
+title Basic Article Search - Detailed Sequence Diagram
+
+actor "User\n(Student/Researcher)" as User
+participant "SearchController" as Controller
+participant "SearchRestController" as RestController
+participant "SemanticScholarService" as SearchService
+participant "SemanticScholarApiClient" as ApiClient
+participant "SemanticScholarMapper" as Mapper
+participant "SearchHistoryService" as HistoryService
+participant "ArticleViewHistoryService" as ViewHistoryService
+participant "Cache" as Cache
+database "Database" as DB
+control "Semantic Scholar API" as API
+
+== Search Request Flow ==
+
+User -> Controller : GET /search
+activate Controller
+Controller -> Controller : model.addAttribute("searchRequest", new SearchRequestDTO())
+Controller --> User : return "user/search" view
+deactivate Controller
+
+User -> User : Fill search form\n(query, filters)
+
+User -> RestController : POST /api/search\n{query, page, size, filters}
+activate RestController
+
+RestController -> RestController : @Valid SearchRequestDTO validation
+alt Invalid request
+    RestController --> User : 400 Bad Request\n{validation errors}
+else Valid request
+    
+    RestController -> SearchService : searchArticles(searchRequest)
+    activate SearchService
+    
+    ' Cache check
+    SearchService -> Cache : @Cacheable check\nkey: query_page_size
+    alt Cache Hit
+        Cache --> SearchService : return cached SearchResponseDTO
+    else Cache Miss
+        
+        ' API call preparation
+        SearchService -> SearchService : calculate offset = page * size
+        SearchService -> SearchService : prepare TARGET_FIELDS
+        
+        SearchService -> ApiClient : searchPapers(query, offset, 100, fields)
+        activate ApiClient
+        
+        ApiClient -> API : HTTP GET /graph/v1/paper/search\n?query={query}&offset={offset}&limit=100&fields={fields}
+        activate API
+        
+        alt API Success
+            API --> ApiClient : 200 OK\n{SemanticScholarResponse}
+        else API Error/Timeout
+            API --> ApiClient : 500/503 Error
+            ApiClient --> SearchService : null response
+            SearchService -> SearchService : createEmptyResponse(request)
+            SearchService --> RestController : empty SearchResponseDTO
+        end
+        deactivate API
+        
+        alt Valid API Response
+            ApiClient --> SearchService : SemanticScholarResponse
+            deactivate ApiClient
+            
+            ' Data mapping
+            SearchService -> SearchService : validate response.getData() != null
+            loop for each SemanticScholarPaper in response.data
+                SearchService -> Mapper : mapToArticleDTO(paper)
+                activate Mapper
+                Mapper -> Mapper : map authors list
+                Mapper -> Mapper : format publication date
+                Mapper -> Mapper : extract DOI from externalIds
+                Mapper --> SearchService : ArticleDTO
+                deactivate Mapper
+            end
+            
+            ' Apply additional filters
+            opt Advanced filters present
+                SearchService -> SearchService : filter by date range
+                SearchService -> Mapper : filterByDocumentType(article, type)
+                SearchService -> Mapper : filterByLanguage(article, language)
+            end
+            
+            ' Build response
+            SearchService -> SearchService : calculateTotalPages(total, pageSize)
+            SearchService -> SearchService : new SearchResponseDTO(articles, total, page, totalPages, query)
+            
+            ' Cache the result
+            SearchService -> Cache : cache result for 30 minutes
+        end
+    end
+    
+    SearchService --> RestController : SearchResponseDTO
+    deactivate SearchService
+    
+    ' Save search history for authenticated users
+    opt User authenticated
+        RestController -> RestController : Authentication authentication = SecurityContextHolder.getContext()
+        RestController -> HistoryService : saveSearchQuery(userEmail, query)
+        activate HistoryService
+        HistoryService -> HistoryService : new SearchHistory(userEmail, query, now())
+        HistoryService -> DB : save(searchHistory)
+        activate DB
+        DB --> HistoryService : saved entity
+        deactivate DB
+        deactivate HistoryService
+    end
+    
+    RestController --> User : 200 OK\nSearchResponseDTO{articles, total, page, query}
+end
+deactivate RestController
+
+== Article View Details Flow ==
+
+User -> RestController : GET /api/search/article/{id}?title={title}
+activate RestController
+
+opt User authenticated
+    RestController -> ViewHistoryService : saveArticleView(userEmail, articleId, title)
+    activate ViewHistoryService
+    ViewHistoryService -> ViewHistoryService : new ArticleViewHistory(userEmail, articleId, title, now())
+    ViewHistoryService -> DB : save(viewHistory)
+    activate DB
+    DB --> ViewHistoryService : saved entity
+    deactivate DB
+    deactivate ViewHistoryService
+end
+
+RestController -> SearchService : getArticleById(articleId)
+activate SearchService
+
+SearchService -> Cache : @Cacheable check\nkey: articleId
+alt Cache Hit
+    Cache --> SearchService : return cached ArticleDTO
+else Cache Miss
+    SearchService -> ApiClient : getPaper(articleId, fields)
+    activate ApiClient
+    ApiClient -> API : HTTP GET /graph/v1/paper/{id}?fields={fields}
+    activate API
+    API --> ApiClient : 200 OK\n{SemanticScholarPaper}
+    deactivate API
+    ApiClient --> SearchService : SemanticScholarPaper
+    deactivate ApiClient
+    
+    SearchService -> Mapper : mapToArticleDTO(paper)
+    activate Mapper
+    Mapper --> SearchService : ArticleDTO
+    deactivate Mapper
+    
+    SearchService -> Cache : cache article details
+end
+
+SearchService --> RestController : Optional<ArticleDTO>
+deactivate SearchService
+
+alt Article found
+    RestController --> User : 200 OK\nArticleDTO
+else Article not found
+    RestController --> User : 404 Not Found
+end
+deactivate RestController
+
+note over User, API
+**Key Design Patterns:**
+- **Caching Strategy**: Results cached for 30 minutes to reduce API calls
+- **Error Handling**: Graceful degradation on API failures
+- **Security**: Only authenticated users get history tracking
+- **Pagination**: Efficient handling of large result sets
+- **Async Processing**: Non-blocking API calls where possible
+end note
+
+@enduml

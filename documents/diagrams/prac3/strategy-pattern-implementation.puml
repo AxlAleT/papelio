@@ -1,0 +1,214 @@
+@startuml "Strategy Pattern - Search Engine Implementation"
+
+!theme plain
+title Strategy Pattern Implementation - Article Search Engine
+
+' Strategy Pattern for different search providers
+package "Search Strategy Pattern" {
+    
+    ' Strategy Interface
+    interface SearchStrategy <<Strategy>> {
+        + search(request: SearchRequestDTO): SearchResponseDTO
+        + getArticleById(id: String): Optional<ArticleDTO>
+        + getRecommendations(request: RecommendationRequestDTO): SearchResponseDTO
+        + isAvailable(): boolean
+        + getPriority(): int
+        + getProviderName(): String
+    }
+    
+    ' Concrete Strategies
+    class SemanticScholarSearchStrategy <<ConcreteStrategy>> {
+        - apiClient: SemanticScholarApiClient
+        - mapper: SemanticScholarMapper
+        - cacheManager: CacheManager
+        - {static} PROVIDER_NAME: String = "Semantic Scholar"
+        - {static} PRIORITY: int = 1
+        --
+        + SemanticScholarSearchStrategy(apiClient: SemanticScholarApiClient, mapper: SemanticScholarMapper, cacheManager: CacheManager)
+        + search(request: SearchRequestDTO): SearchResponseDTO
+        + getArticleById(id: String): Optional<ArticleDTO>
+        + getRecommendations(request: RecommendationRequestDTO): SearchResponseDTO
+        + isAvailable(): boolean
+        + getPriority(): int
+        + getProviderName(): String
+        - buildApiQuery(request: SearchRequestDTO): String
+        - handleApiError(exception: Exception): SearchResponseDTO
+        - validateResponse(response: SemanticScholarResponse): boolean
+    }
+    
+    class CrossRefSearchStrategy <<ConcreteStrategy>> {
+        - restTemplate: RestTemplate
+        - crossRefMapper: CrossRefMapper
+        - {static} PROVIDER_NAME: String = "CrossRef"
+        - {static} PRIORITY: int = 2
+        - {static} BASE_URL: String = "https://api.crossref.org"
+        --
+        + CrossRefSearchStrategy(restTemplate: RestTemplate, crossRefMapper: CrossRefMapper)
+        + search(request: SearchRequestDTO): SearchResponseDTO
+        + getArticleById(id: String): Optional<ArticleDTO>
+        + getRecommendations(request: RecommendationRequestDTO): SearchResponseDTO
+        + isAvailable(): boolean
+        + getPriority(): int
+        + getProviderName(): String
+        - buildCrossRefQuery(request: SearchRequestDTO): String
+        - mapCrossRefResponse(response: String): SearchResponseDTO
+        - fallbackRecommendations(request: RecommendationRequestDTO): SearchResponseDTO
+    }
+    
+    class ArxivSearchStrategy <<ConcreteStrategy>> {
+        - arxivApiClient: ArxivApiClient
+        - arxivMapper: ArxivMapper
+        - {static} PROVIDER_NAME: String = "ArXiv"
+        - {static} PRIORITY: int = 3
+        --
+        + ArxivSearchStrategy(arxivApiClient: ArxivApiClient, arxivMapper: ArxivMapper)
+        + search(request: SearchRequestDTO): SearchResponseDTO
+        + getArticleById(id: String): Optional<ArticleDTO>
+        + getRecommendations(request: RecommendationRequestDTO): SearchResponseDTO
+        + isAvailable(): boolean
+        + getPriority(): int
+        + getProviderName(): String
+        - filterArxivByDomain(articles: List<ArticleDTO>, domain: String): List<ArticleDTO>
+        - extractArxivId(id: String): String
+    }
+    
+    ' Context Class
+    class SearchEngineContext <<Context>> {
+        - strategies: List<SearchStrategy>
+        - currentStrategy: SearchStrategy
+        - circuitBreakerService: CircuitBreakerService
+        - metricsService: MetricsService
+        --
+        + SearchEngineContext(strategies: List<SearchStrategy>)
+        + search(request: SearchRequestDTO): SearchResponseDTO
+        + getArticleById(id: String): Optional<ArticleDTO>
+        + getRecommendations(request: RecommendationRequestDTO): SearchResponseDTO
+        + setStrategy(strategy: SearchStrategy): void
+        + getCurrentStrategy(): SearchStrategy
+        + getAvailableStrategies(): List<SearchStrategy>
+        - selectBestStrategy(): SearchStrategy
+        - fallbackToNextStrategy(failedStrategy: SearchStrategy): SearchStrategy
+        - executeWithFallback(operation: Supplier<T>): T
+        - logStrategyUsage(strategy: SearchStrategy, operation: String, success: boolean): void
+    }
+    
+    ' Configuration Class
+    class SearchStrategyConfig <<Configuration>> {
+        --
+        + semanticScholarStrategy(apiClient: SemanticScholarApiClient, mapper: SemanticScholarMapper, cacheManager: CacheManager): SemanticScholarSearchStrategy <<@Bean>>
+        + crossRefStrategy(restTemplate: RestTemplate, mapper: CrossRefMapper): CrossRefSearchStrategy <<@Bean>>
+        + arxivStrategy(apiClient: ArxivApiClient, mapper: ArxivMapper): ArxivSearchStrategy <<@Bean>>
+        + searchEngineContext(strategies: List<SearchStrategy>): SearchEngineContext <<@Bean>>
+        + searchStrategies(): List<SearchStrategy> <<@Bean>>
+    }
+    
+    ' Supporting Classes
+    class CircuitBreakerService <<Service>> {
+        - circuitBreakers: Map<String, CircuitBreaker>
+        --
+        + executeWithCircuitBreaker(providerName: String, operation: Supplier<T>): T
+        + getCircuitBreakerState(providerName: String): CircuitBreaker.State
+        + resetCircuitBreaker(providerName: String): void
+        - createCircuitBreaker(providerName: String): CircuitBreaker
+    }
+    
+    class MetricsService <<Service>> {
+        - meterRegistry: MeterRegistry
+        --
+        + recordSearchAttempt(provider: String, success: boolean, duration: long): void
+        + recordApiCall(provider: String, endpoint: String, statusCode: int): void
+        + getProviderMetrics(provider: String): Map<String, Object>
+        + getSystemMetrics(): Map<String, Object>
+    }
+    
+    ' Updated Service Layer to use Strategy
+    class ArticleSearchService <<Service>> {
+        - searchEngineContext: SearchEngineContext
+        - searchHistoryService: SearchHistoryService
+        - cacheManager: CacheManager
+        --
+        + searchArticles(request: SearchRequestDTO): SearchResponseDTO
+        + getArticleById(id: String): Optional<ArticleDTO>
+        + getRecommendations(request: RecommendationRequestDTO): SearchResponseDTO
+        + getProviderStatus(): Map<String, Object>
+        + switchProvider(providerName: String): boolean
+        - enrichWithMetadata(response: SearchResponseDTO): SearchResponseDTO
+        - applyBusinessRules(response: SearchResponseDTO): SearchResponseDTO
+    }
+}
+
+' Strategy Pattern Relationships
+SearchStrategy <|.. SemanticScholarSearchStrategy
+SearchStrategy <|.. CrossRefSearchStrategy
+SearchStrategy <|.. ArxivSearchStrategy
+
+SearchEngineContext o-- SearchStrategy : "uses"
+SearchEngineContext *-- CircuitBreakerService : "depends on"
+SearchEngineContext *-- MetricsService : "depends on"
+
+ArticleSearchService *-- SearchEngineContext : "uses"
+
+' Configuration relationships
+SearchStrategyConfig ..> SemanticScholarSearchStrategy : "creates"
+SearchStrategyConfig ..> CrossRefSearchStrategy : "creates"
+SearchStrategyConfig ..> ArxivSearchStrategy : "creates"
+SearchStrategyConfig ..> SearchEngineContext : "configures"
+
+' Pattern Benefits and Implementation Notes
+note top of SearchStrategy
+**Strategy Pattern Benefits:**
+1. **Flexibility**: Easy to add new search providers
+2. **Maintainability**: Each provider isolated in its own class
+3. **Testability**: Mock individual strategies for unit tests
+4. **Runtime switching**: Change providers based on availability
+5. **Circuit breaker integration**: Failover between providers
+end note
+
+note right of SearchEngineContext
+**Context Responsibilities:**
+- Select appropriate strategy based on availability
+- Handle failover between strategies
+- Implement circuit breaker pattern
+- Collect metrics and monitoring data
+- Provide unified interface to clients
+end note
+
+note bottom of SemanticScholarSearchStrategy
+**Concrete Strategy Implementation:**
+- Provider-specific API integration
+- Error handling and retry logic
+- Response mapping and validation
+- Caching strategy per provider
+- Health check implementation
+end note
+
+' Usage Example Flow
+note left of ArticleSearchService
+**Usage Example:**
+```java
+@Service
+public class ArticleSearchService {
+    
+    public SearchResponseDTO search(SearchRequestDTO request) {
+        try {
+            return searchEngineContext.search(request);
+        } catch (AllProvidersFailedException e) {
+            return createErrorResponse(e);
+        }
+    }
+}
+```
+end note
+
+' Pattern Sequence for Strategy Selection
+note bottom of SearchEngineContext
+**Strategy Selection Algorithm:**
+1. Check circuit breaker status for each provider
+2. Sort strategies by priority (1=highest)
+3. Test provider availability via health check
+4. Select first available provider
+5. Execute operation with fallback on failure
+6. Update metrics and circuit breaker state
+end note
+
+@enduml

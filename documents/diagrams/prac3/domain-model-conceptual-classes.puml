@@ -1,0 +1,166 @@
+@startuml "Papelio Domain Model - Conceptual Class Diagram"
+
+!theme plain
+title Papelio Academic Paper Search System - Conceptual Class Diagram
+
+' Core Domain Entities
+class User {
+    - id: Long <<PK>>
+    - email: String <<unique>>
+    - password: String
+    - name: String
+    - role: String
+    --
+    + register(RegisterDTO): User
+    + authenticate(email, password): boolean
+    + updateProfile(UserDTO): void
+    + hasRole(role): boolean
+}
+
+class Article {
+    - id: String <<PK>>
+    - title: String
+    - abstract: String
+    - doi: String
+    - journal: String
+    - publicationDate: LocalDate
+    - documentType: String
+    - language: String
+    - citationCount: Integer
+    - url: String
+    --
+    + getMetadata(): ArticleDTO
+    + isAccessible(): boolean
+    + getFormattedCitation(): String
+}
+
+class Author {
+    - authorId: String <<PK>>
+    - name: String
+    --
+    + getPublications(): List<Article>
+    + getCollaborators(): List<Author>
+}
+
+class SearchHistory {
+    - id: Long <<PK>>
+    - userEmail: String <<FK>>
+    - searchQuery: String
+    - searchDate: LocalDateTime
+    --
+    + getRecentSearches(userEmail): List<SearchHistory>
+    + getPopularQueries(): List<String>
+}
+
+class ArticleViewHistory {
+    - id: Long <<PK>>
+    - userEmail: String <<FK>>
+    - articleId: String <<FK>>
+    - title: String
+    - viewDate: LocalDateTime
+    --
+    + getUserViewHistory(userEmail): List<ArticleViewHistory>
+    + getMostViewedArticles(): List<Article>
+    + getRecommendations(userEmail): List<Article>
+}
+
+class ArticleFavorite {
+    - id: Long <<PK>>
+    - userEmail: String <<FK>>
+    - articleId: String <<FK>>
+    - title: String
+    - favoriteDate: LocalDateTime
+    --
+    + addToFavorites(userEmail, articleId): boolean
+    + removeFromFavorites(userEmail, articleId): boolean
+    + isFavorite(userEmail, articleId): boolean
+}
+
+class ExternalIds {
+    - doi: String
+    - arxiv: String
+    - pubmed: String
+    --
+    + getPrimaryIdentifier(): String
+    + getAlternativeIds(): List<String>
+}
+
+' External API Models (Value Objects)
+class SemanticScholarResponse {
+    - total: Long
+    - data: List<SemanticScholarPaper>
+    --
+    + toArticleList(): List<Article>
+    + hasResults(): boolean
+}
+
+class SemanticScholarPaper {
+    - paperId: String
+    - title: String
+    - abstract: String
+    - venue: String
+    - year: Integer
+    - citationCount: Integer
+    - url: String
+    --
+    + toArticleDTO(): ArticleDTO
+    + isValid(): boolean
+}
+
+' Search and Service Classes
+class SearchRequest {
+    - query: String
+    - fromDate: LocalDate
+    - toDate: LocalDate
+    - journal: String
+    - documentType: String
+    - language: String
+    - page: Integer
+    - size: Integer
+    --
+    + validateRequest(): boolean
+    + buildApiQuery(): String
+}
+
+class SearchResponse {
+    - articles: List<Article>
+    - totalResults: long
+    - currentPage: int
+    - totalPages: int
+    - query: String
+    --
+    + hasResults(): boolean
+    + getNextPage(): SearchResponse
+    + getPreviousPage(): SearchResponse
+}
+
+' Relationships - Associations
+User ||--o{ SearchHistory : "performs searches"
+User ||--o{ ArticleViewHistory : "views articles"
+User ||--o{ ArticleFavorite : "favorites articles"
+
+Article ||--o{ ArticleViewHistory : "is viewed"
+Article ||--o{ ArticleFavorite : "is favorited"
+Article }o--o{ Author : "is authored by"
+Article ||--|| ExternalIds : "has identifiers"
+
+SemanticScholarPaper }o--o{ Author : "authored by"
+SemanticScholarPaper ||--|| ExternalIds : "has external IDs"
+SemanticScholarResponse ||--o{ SemanticScholarPaper : "contains"
+
+SearchRequest ||--|| SearchResponse : "generates"
+
+' Composition relationships
+User ||--* "email" SearchHistory : "email identifies user"
+User ||--* "email" ArticleViewHistory : "email identifies user"
+User ||--* "email" ArticleFavorite : "email identifies user"
+
+note top of User : "Central entity representing system users\n(Students, Researchers, Admins)"
+note top of Article : "Represents academic papers/articles\nfrom external APIs"
+note right of SearchHistory : "Tracks user search behavior\nfor personalization"
+note right of ArticleViewHistory : "Enables recommendation engine\nand usage analytics"
+note right of ArticleFavorite : "Personal article collection\nfor users"
+
+note bottom of SemanticScholarResponse : "External API response models\n(not persisted in database)"
+
+@enduml

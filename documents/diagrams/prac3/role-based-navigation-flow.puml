@@ -1,0 +1,214 @@
+@startuml "Role-Based Navigation Flow"
+
+!theme plain
+title Papelio - Role-Based Navigation and Screen Flow
+
+' Define the different user types and their access levels
+package "User Roles and Access Levels" {
+    
+    actor "Anonymous Visitor" as Anonymous #lightgray
+    actor "Registered User\n(Student/Researcher)" as RegisteredUser #lightblue  
+    actor "Administrator" as Admin #lightcoral
+    
+    note right of Anonymous
+        **Limited Access:**
+        - Basic article search
+        - View search results
+        - Access public content
+        - Registration/Login forms
+    end note
+    
+    note right of RegisteredUser
+        **Full User Access:**
+        - All anonymous features
+        - Personal dashboard
+        - Search history tracking
+        - Favorites management
+        - Personalized recommendations
+        - Profile management
+    end note
+    
+    note right of Admin
+        **Administrative Access:**
+        - All user features
+        - User management
+        - System analytics
+        - Audit logs
+        - Configuration settings
+    end note
+}
+
+' Screen states and transitions
+state "Application Screens" as AppScreens {
+    
+    ' Public accessible screens
+    state "Public Access Zone" as PublicZone {
+        state "Landing Page\n/" as LandingPage
+        state "Article Search\n/search" as PublicSearchPage
+        state "Search Results\n/search/results" as PublicResultsPage
+        state "Article Details\n/search/article/{id}" as PublicArticlePage
+        state "Login Form\n/login" as LoginPage
+        state "Registration Form\n/register" as RegisterPage
+        state "About Page\n/about" as AboutPage
+        
+        LandingPage --> PublicSearchPage : "Start searching"
+        LandingPage --> LoginPage : "Sign in"
+        LandingPage --> RegisterPage : "Sign up"
+        LandingPage --> AboutPage : "Learn more"
+        
+        PublicSearchPage --> PublicResultsPage : "Submit search"
+        PublicResultsPage --> PublicArticlePage : "View article details"
+        PublicResultsPage --> LoginPage : "Login to save/favorite"
+        
+        LoginPage --> RegisterPage : "Create account"
+        RegisterPage --> LoginPage : "Already have account"
+    }
+    
+    ' User authenticated screens
+    state "User Authenticated Zone" as UserZone {
+        state "User Dashboard\n/user/dashboard" as UserDashboard
+        state "Enhanced Search\n/user/search" as UserSearchPage
+        state "Enhanced Results\n/search/results" as UserResultsPage
+        state "User Favorites\n/user/favorites" as FavoritesPage
+        state "Search History\n/user/history" as HistoryPage
+        state "User Profile\n/user/profile" as ProfilePage
+        state "Recommendations\n/user/recommendations" as RecommendationsPage
+        
+        UserDashboard --> UserSearchPage : "New search"
+        UserDashboard --> FavoritesPage : "View favorites"
+        UserDashboard --> HistoryPage : "Search history"
+        UserDashboard --> ProfilePage : "Account settings"
+        UserDashboard --> RecommendationsPage : "Get recommendations"
+        
+        UserSearchPage --> UserResultsPage : "Execute search"
+        UserResultsPage --> FavoritesPage : "Add to favorites"
+        UserResultsPage --> UserDashboard : "Back to dashboard"
+        
+        HistoryPage --> UserSearchPage : "Repeat search"
+        RecommendationsPage --> UserResultsPage : "View recommended articles"
+    }
+    
+    ' Admin screens
+    state "Administrative Zone" as AdminZone {
+        state "Admin Dashboard\n/admin/dashboard" as AdminDashboard
+        state "User Management\n/admin/users" as UserManagementPage
+        state "System Analytics\n/admin/analytics" as AnalyticsPage
+        state "Audit Logs\n/admin/audit" as AuditPage
+        state "System Settings\n/admin/settings" as SettingsPage
+        
+        AdminDashboard --> UserManagementPage : "Manage users"
+        AdminDashboard --> AnalyticsPage : "View analytics"
+        AdminDashboard --> AuditPage : "Check audit logs"
+        AdminDashboard --> SettingsPage : "System configuration"
+        
+        UserManagementPage --> AdminDashboard : "Return to admin home"
+        AnalyticsPage --> AdminDashboard : "Back to dashboard"
+        AuditPage --> AdminDashboard : "Return to admin"
+        SettingsPage --> AdminDashboard : "Save and return"
+    }
+    
+    ' Shared/transition states
+    state "Session Management" as SessionMgmt {
+        state "Logout Process\n/logout" as LogoutProcess
+        state "Session Timeout\n/timeout" as TimeoutPage
+        state "Access Denied\n/403" as AccessDeniedPage
+        state "Not Found\n/404" as NotFoundPage
+        state "Server Error\n/500" as ErrorPage
+    }
+}
+
+' Role-based access controls
+Anonymous --> PublicZone : "Full access to public zone"
+Anonymous --> LoginPage : "Can access login"
+Anonymous --> RegisterPage : "Can register"
+
+RegisteredUser --> PublicZone : "Retains public access"
+RegisteredUser --> UserZone : "Full user features"
+RegisteredUser --> SessionMgmt : "Session management"
+
+Admin --> PublicZone : "Public access (inherited)"
+Admin --> UserZone : "User features (inherited)"
+Admin --> AdminZone : "Administrative access"
+Admin --> SessionMgmt : "Session management"
+
+' Authentication transitions
+LoginPage --> UserDashboard : "Successful user login"
+LoginPage --> AdminDashboard : "Successful admin login\n@PreAuthorize('hasRole(ADMIN)')"
+RegisterPage --> UserDashboard : "Registration complete"
+
+' Logout and security transitions
+UserDashboard --> LogoutProcess : "User logout"
+AdminDashboard --> LogoutProcess : "Admin logout"
+LogoutProcess --> LandingPage : "Redirect to home"
+
+TimeoutPage --> LoginPage : "Session expired"
+AccessDeniedPage --> LandingPage : "Insufficient privileges"
+
+' Error handling
+UserZone --> NotFoundPage : "Invalid URL"
+AdminZone --> AccessDeniedPage : "Role validation failed"
+[*] --> ErrorPage : "System error"
+
+' Security annotations and middleware
+note top of AdminZone
+**Security Controls:**
+@PreAuthorize("hasRole('ADMIN')")
+@Secured("ROLE_ADMIN")
+- Spring Security role validation
+- CSRF protection enabled
+- Session management active
+end note
+
+note top of UserZone
+**Authentication Required:**
+- Valid user session
+- CSRF tokens validated
+- User context available
+- SecurityContextHolder populated
+end note
+
+note top of PublicZone
+**Public Access:**
+- No authentication required
+- Basic CSRF protection
+- Rate limiting applied
+- Guest session tracking
+end note
+
+' API endpoints mapping
+note bottom of UserSearchPage
+**API Endpoints:**
+POST /api/search - Basic search
+GET /api/search/history - User history
+POST /api/search/favorite - Add favorite
+GET /api/search/recommendations - Get recommendations
+end note
+
+note bottom of UserManagementPage
+**Admin API Endpoints:**
+GET /admin/api/users - List users
+DELETE /admin/api/users/{id} - Delete user
+PUT /admin/api/users/{id} - Update user
+GET /admin/api/statistics - System stats
+end note
+
+' Navigation patterns
+note right of UserDashboard
+**Dashboard Components:**
+- Quick search widget
+- Recent activity feed
+- Favorites quick access
+- Recommendation previews
+- Usage statistics
+end note
+
+note right of AdminDashboard
+**Admin Dashboard:**
+- System health indicators
+- User activity metrics
+- API usage statistics
+- Recent administrative actions
+- System alerts and notifications
+end note
+
+@enduml

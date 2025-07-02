@@ -1,0 +1,565 @@
+@startuml "Papelio Design Model - Complete Class Diagram"
+
+!theme plain
+title Papelio Academic Paper Search System - Design Class Diagram
+
+' Package organization
+package "com.escom.papelio" {
+    
+    package "model" <<Entity Layer>> {
+        
+        class User {
+            - id: Long <<@Id @GeneratedValue>>
+            - email: String <<@Column(unique=true, nullable=false) @Email>>
+            - password: String <<@Column(nullable=false)>>
+            - name: String <<@Column(nullable=false) @NotEmpty>>
+            - role: String <<DEFAULT "USER">>
+            --
+            + User()
+            + User(email: String, password: String, name: String)
+            + getId(): Long
+            + getEmail(): String
+            + setEmail(email: String): void
+            + getPassword(): String
+            + setPassword(password: String): void
+            + getName(): String
+            + setName(name: String): void
+            + getRole(): String
+            + setRole(role: String): void
+            + equals(obj: Object): boolean
+            + hashCode(): int
+            + toString(): String
+        }
+        
+        class SearchHistory {
+            - id: Long <<@Id @GeneratedValue>>
+            - userEmail: String <<@Column(nullable=false)>>
+            - searchQuery: String <<@Column(nullable=false)>>
+            - searchDate: LocalDateTime <<@CreatedDate>>
+            --
+            + SearchHistory()
+            + SearchHistory(userEmail: String, searchQuery: String)
+            + getId(): Long
+            + getUserEmail(): String
+            + setUserEmail(userEmail: String): void
+            + getSearchQuery(): String
+            + setSearchQuery(searchQuery: String): void
+            + getSearchDate(): LocalDateTime
+            + setSearchDate(searchDate: LocalDateTime): void
+            + equals(obj: Object): boolean
+            + hashCode(): int
+        }
+        
+        class ArticleViewHistory {
+            - id: Long <<@Id @GeneratedValue>>
+            - userEmail: String <<@Column(nullable=false)>>
+            - articleId: String <<@Column(nullable=false)>>
+            - title: String <<@Column(nullable=false)>>
+            - viewDate: LocalDateTime <<@CreatedDate>>
+            --
+            + ArticleViewHistory()
+            + ArticleViewHistory(userEmail: String, articleId: String, title: String)
+            + getId(): Long
+            + getUserEmail(): String
+            + setUserEmail(userEmail: String): void
+            + getArticleId(): String
+            + setArticleId(articleId: String): void
+            + getTitle(): String
+            + setTitle(title: String): void
+            + getViewDate(): LocalDateTime
+            + setViewDate(viewDate: LocalDateTime): void
+        }
+        
+        class ArticleFavorite {
+            - id: Long <<@Id @GeneratedValue>>
+            - userEmail: String <<@Column(nullable=false)>>
+            - articleId: String <<@Column(nullable=false)>>
+            - title: String <<@Column(nullable=false)>>
+            - favoriteDate: LocalDateTime <<@CreatedDate>>
+            --
+            + ArticleFavorite()
+            + ArticleFavorite(userEmail: String, articleId: String, title: String)
+            + getId(): Long
+            + getUserEmail(): String
+            + setUserEmail(userEmail: String): void
+            + getArticleId(): String
+            + setArticleId(articleId: String): void
+            + getTitle(): String
+            + setTitle(title: String): void
+            + getFavoriteDate(): LocalDateTime
+            + setFavoriteDate(favoriteDate: LocalDateTime): void
+        }
+        
+        ' External API Models (not persisted)
+        class SemanticScholarPaper {
+            - paperId: String
+            - title: String
+            - abstract_: String
+            - authors: List<Author>
+            - venue: String
+            - year: Integer
+            - citationCount: Integer
+            - url: String
+            - externalIds: ExternalIds
+            --
+            + getPaperId(): String
+            + setPaperId(paperId: String): void
+            + getTitle(): String
+            + setTitle(title: String): void
+            + getAbstract_(): String
+            + setAbstract_(abstract_: String): void
+            + getAuthors(): List<Author>
+            + setAuthors(authors: List<Author>): void
+            + getVenue(): String
+            + setVenue(venue: String): void
+            + getYear(): Integer
+            + setYear(year: Integer): void
+            + getCitationCount(): Integer
+            + setCitationCount(citationCount: Integer): void
+            + getUrl(): String
+            + setUrl(url: String): void
+            + getExternalIds(): ExternalIds
+            + setExternalIds(externalIds: ExternalIds): void
+        }
+        
+        class Author {
+            - authorId: String
+            - name: String
+            --
+            + getAuthorId(): String
+            + setAuthorId(authorId: String): void
+            + getName(): String
+            + setName(name: String): void
+        }
+        
+        class ExternalIds {
+            - doi: String
+            - arxiv: String
+            - pubmed: String
+            --
+            + getDoi(): String
+            + setDoi(doi: String): void
+            + getArxiv(): String
+            + setArxiv(arxiv: String): void
+            + getPubmed(): String
+            + setPubmed(pubmed: String): void
+        }
+        
+        class SemanticScholarResponse {
+            - total: Long
+            - data: List<SemanticScholarPaper>
+            --
+            + getTotal(): Long
+            + setTotal(total: Long): void
+            + getData(): List<SemanticScholarPaper>
+            + setData(data: List<SemanticScholarPaper>): void
+        }
+    }
+    
+    package "dto" <<Data Transfer Layer>> {
+        
+        class SearchRequestDTO {
+            - query: String <<@NotBlank>>
+            - fromDate: LocalDate
+            - toDate: LocalDate
+            - journal: String
+            - documentType: String
+            - language: String
+            - page: Integer <<DEFAULT 0>>
+            - size: Integer <<DEFAULT 10>>
+            --
+            + SearchRequestDTO()
+            + SearchRequestDTO(query: String)
+            + getQuery(): String
+            + setQuery(query: String): void
+            + getFromDate(): LocalDate
+            + setFromDate(fromDate: LocalDate): void
+            + getToDate(): LocalDate
+            + setToDate(toDate: LocalDate): void
+            + getJournal(): String
+            + setJournal(journal: String): void
+            + getDocumentType(): String
+            + setDocumentType(documentType: String): void
+            + getLanguage(): String
+            + setLanguage(language: String): void
+            + getPage(): Integer
+            + setPage(page: Integer): void
+            + getSize(): Integer
+            + setSize(size: Integer): void
+            + toString(): String
+        }
+        
+        class SearchResponseDTO {
+            - articles: List<ArticleDTO>
+            - totalResults: long
+            - currentPage: int
+            - totalPages: int
+            - query: String
+            --
+            + SearchResponseDTO()
+            + SearchResponseDTO(articles: List<ArticleDTO>, totalResults: long, currentPage: int, totalPages: int, query: String)
+            + getArticles(): List<ArticleDTO>
+            + setArticles(articles: List<ArticleDTO>): void
+            + getTotalResults(): long
+            + setTotalResults(totalResults: long): void
+            + getCurrentPage(): int
+            + setCurrentPage(currentPage: int): void
+            + getTotalPages(): int
+            + setTotalPages(totalPages: int): void
+            + getQuery(): String
+            + setQuery(query: String): void
+        }
+        
+        class ArticleDTO {
+            - id: String
+            - title: String
+            - abstract_: String
+            - doi: String
+            - authors: List<String>
+            - journal: String
+            - publicationDate: LocalDate
+            - documentType: String
+            - language: String
+            - citationCount: Integer
+            - url: String
+            --
+            + ArticleDTO()
+            + getId(): String
+            + setId(id: String): void
+            + getTitle(): String
+            + setTitle(title: String): void
+            + getAbstract_(): String
+            + setAbstract_(abstract_: String): void
+            + getDoi(): String
+            + setDoi(doi: String): void
+            + getAuthors(): List<String>
+            + setAuthors(authors: List<String>): void
+            + getJournal(): String
+            + setJournal(journal: String): void
+            + getPublicationDate(): LocalDate
+            + setPublicationDate(publicationDate: LocalDate): void
+            + getDocumentType(): String
+            + setDocumentType(documentType: String): void
+            + getLanguage(): String
+            + setLanguage(language: String): void
+            + getCitationCount(): Integer
+            + setCitationCount(citationCount: Integer): void
+            + getUrl(): String
+            + setUrl(url: String): void
+        }
+        
+        class UserDTO {
+            - id: Long
+            - email: String
+            - name: String
+            - role: String
+            - password: String
+            --
+            + UserDTO()
+            + UserDTO(id: Long, email: String, name: String, role: String)
+            + getId(): Long
+            + setId(id: Long): void
+            + getEmail(): String
+            + setEmail(email: String): void
+            + getName(): String
+            + setName(name: String): void
+            + getRole(): String
+            + setRole(role: String): void
+            + getPassword(): String
+            + setPassword(password: String): void
+        }
+        
+        class RegisterDTO {
+            - email: String <<@Email @NotBlank>>
+            - password: String <<@NotBlank @Size(min=6)>>
+            - name: String <<@NotBlank>>
+            --
+            + RegisterDTO()
+            + getEmail(): String
+            + setEmail(email: String): void
+            + getPassword(): String
+            + setPassword(password: String): void
+            + getName(): String
+            + setName(name: String): void
+        }
+        
+        class ArticleFavoriteRequestDTO {
+            - articleId: String <<@NotBlank>>
+            - title: String <<@NotBlank>>
+            --
+            + ArticleFavoriteRequestDTO()
+            + getArticleId(): String
+            + setArticleId(articleId: String): void
+            + getTitle(): String
+            + setTitle(title: String): void
+        }
+        
+        class RecommendationRequestDTO {
+            - paperIds: List<String>
+            - limit: Integer <<DEFAULT 20>>
+            --
+            + RecommendationRequestDTO()
+            + RecommendationRequestDTO(paperIds: List<String>, limit: Integer)
+            + getPaperIds(): List<String>
+            + setPaperIds(paperIds: List<String>): void
+            + getLimit(): Integer
+            + setLimit(limit: Integer): void
+        }
+    }
+    
+    package "repository" <<Data Access Layer>> {
+        
+        interface UserRepository <<@Repository>> {
+            + findByEmail(email: String): Optional<User>
+            + existsByEmail(email: String): boolean
+            + save(user: User): User
+            + findById(id: Long): Optional<User>
+            + findAll(): List<User>
+            + deleteById(id: Long): void
+        }
+        
+        interface SearchHistoryRepository <<@Repository>> {
+            + findByUserEmailOrderBySearchDateDesc(userEmail: String): List<SearchHistory>
+            + findTopSearchQueries(): List<Object[]> <<@Query>>
+            + save(searchHistory: SearchHistory): SearchHistory
+        }
+        
+        interface ArticleViewHistoryRepository <<@Repository>> {
+            + findByUserEmailOrderByViewDateDesc(userEmail: String): List<ArticleViewHistory>
+            + findMostViewedArticles(): List<Object[]> <<@Query>>
+            + save(viewHistory: ArticleViewHistory): ArticleViewHistory
+        }
+        
+        interface ArticleFavoriteRepository <<@Repository>> {
+            + findByUserEmailOrderByFavoriteDateDesc(userEmail: String): List<ArticleFavorite>
+            + findByUserEmailAndArticleId(userEmail: String, articleId: String): Optional<ArticleFavorite>
+            + existsByUserEmailAndArticleId(userEmail: String, articleId: String): boolean
+            + deleteByUserEmailAndArticleId(userEmail: String, articleId: String): void
+            + save(favorite: ArticleFavorite): ArticleFavorite
+        }
+    }
+    
+    package "service" <<Business Logic Layer>> {
+        
+        interface ArticleService {
+            + searchArticles(searchRequest: SearchRequestDTO): SearchResponseDTO
+            + getArticleById(id: String): Optional<ArticleDTO>
+            + getRecommendations(request: RecommendationRequestDTO): SearchResponseDTO
+        }
+        
+        class SemanticScholarService <<@Service @RequiredArgsConstructor @Slf4j>> {
+            - {static} TARGET_RECOMMENDATIONS: int = 10
+            - {static} TARGET_RETRIVED_ARTICLES: int = 100
+            - {static} TARGET_FIELDS: String = "title,abstract,authors,venue,year,citationCount,url,externalIds"
+            - apiClient: SemanticScholarApiClient
+            - mapper: SemanticScholarMapper
+            --
+            + searchArticles(searchRequest: SearchRequestDTO): SearchResponseDTO <<@Cacheable>>
+            + getArticleById(id: String): Optional<ArticleDTO> <<@Cacheable>>
+            + getRecommendations(request: RecommendationRequestDTO): SearchResponseDTO
+            - createEmptyResponse(request: SearchRequestDTO): SearchResponseDTO
+            - calculateTotalPages(total: Long, pageSize: Integer): int
+            - {static} getInfo(response: SemanticScholarResponse): void
+        }
+        
+        class UserService <<@Service @RequiredArgsConstructor>> {
+            - userRepository: UserRepository
+            - passwordEncoder: PasswordEncoder
+            --
+            + registerUser(registerDTO: RegisterDTO): User
+            + getUserProfile(email: String): UserDTO
+            + updateUserProfile(email: String, userDTO: UserDTO): UserDTO
+            + getAllUsers(): List<UserDTO>
+            + deleteUser(id: Long): void
+            + existsByEmail(email: String): boolean
+            - convertToDTO(user: User): UserDTO
+        }
+        
+        class SearchHistoryService <<@Service @RequiredArgsConstructor @Slf4j>> {
+            - searchHistoryRepository: SearchHistoryRepository
+            --
+            + saveSearchQuery(userEmail: String, query: String): void
+            + getUserSearchHistory(userEmail: String): List<SearchHistory>
+            + getTopSearchQueries(): List<Object[]>
+        }
+        
+        class ArticleViewHistoryService <<@Service @RequiredArgsConstructor @Slf4j>> {
+            - articleViewHistoryRepository: ArticleViewHistoryRepository
+            --
+            + saveArticleView(userEmail: String, articleId: String, title: String): void
+            + getUserArticleViewHistory(userEmail: String): List<ArticleViewHistory>
+            + getMostViewedArticles(): List<Object[]>
+            + getMostViewedArticlesAsDTO(): SearchResponseDTO
+            + getUserViewedArticleIds(userEmail: String, limit: int): List<String>
+        }
+        
+        class ArticleFavoriteService <<@Service @RequiredArgsConstructor @Slf4j>> {
+            - articleFavoriteRepository: ArticleFavoriteRepository
+            --
+            + saveArticleFavorite(userEmail: String, articleId: String, title: String): boolean
+            + removeArticleFavorite(userEmail: String, articleId: String): boolean <<@Transactional>>
+            + isArticleFavorite(userEmail: String, articleId: String): boolean
+            + getUserFavoritesAsDTO(userEmail: String): SearchResponseDTO
+        }
+        
+        class AdminService <<@Service @RequiredArgsConstructor @Slf4j>> {
+            - userRepository: UserRepository
+            --
+            + getAllUsers(): List<UserDTO>
+            + deleteUser(id: Long): void
+            + getUserStatistics(): Map<String, Object>
+        }
+    }
+    
+    package "controller" <<Presentation Layer>> {
+        
+        class SearchController <<@Controller @RequestMapping("/search") @RequiredArgsConstructor>> {
+            - articleService: ArticleService
+            - searchHistoryService: SearchHistoryService
+            --
+            + showSearchPage(model: Model): String <<@GetMapping>>
+            + showAdvancedSearchPage(model: Model): String <<@GetMapping("/advanced")>>
+            + performSearch(searchRequest: SearchRequestDTO, model: Model, authentication: Authentication): String <<@PostMapping("/results")>>
+            + viewSearchHistory(model: Model, principal: Principal): String <<@GetMapping("/history")>>
+            + viewArticleDetails(id: String, model: Model): String <<@GetMapping("/article/{id}")>>
+        }
+        
+        class SearchRestController <<@RestController @RequestMapping("/api/search") @RequiredArgsConstructor @Slf4j>> {
+            - articleService: ArticleService
+            - searchHistoryService: SearchHistoryService
+            - articleViewHistoryService: ArticleViewHistoryService
+            - semanticScholarService: SemanticScholarService
+            - articleFavoriteService: ArticleFavoriteService
+            --
+            + basicSearch(searchRequest: SearchRequestDTO, authentication: Authentication): ResponseEntity<SearchResponseDTO> <<@PostMapping>>
+            + getArticleById(id: String, title: String, authentication: Authentication): ResponseEntity<ArticleDTO> <<@GetMapping("/article/{id}")>>
+            + getSearchHistory(authentication: Authentication): ResponseEntity<?> <<@GetMapping("/history")>>
+            + getArticleViewHistory(authentication: Authentication): ResponseEntity<?> <<@GetMapping("/article-history")>>
+            + getPopularArticles(): ResponseEntity<SearchResponseDTO> <<@GetMapping("/popular-articles")>>
+            + getRecommendations(authentication: Authentication): ResponseEntity<SearchResponseDTO> <<@GetMapping("/recommendations")>>
+            + addArticleToFavorites(favoriteRequest: ArticleFavoriteRequestDTO, authentication: Authentication): ResponseEntity<?> <<@PostMapping("/favorite")>>
+            + removeArticleFromFavorites(articleId: String, authentication: Authentication): ResponseEntity<?> <<@DeleteMapping("/favorite/{articleId}")>>
+            + getUserFavorites(authentication: Authentication): ResponseEntity<SearchResponseDTO> <<@GetMapping("/favorite")>>
+            + checkIfFavorite(articleId: String, authentication: Authentication): ResponseEntity<Map<String, Boolean>> <<@GetMapping("/favorite/check/{articleId}")>>
+        }
+        
+        class UserController <<@Controller @RequestMapping("/user") @RequiredArgsConstructor>> {
+            - userRepository: UserRepository
+            --
+            + redirectToDashboard(): String <<@GetMapping>>
+            + dashboard(): String <<@GetMapping("/dashboard")>>
+            + showProfile(model: Model, principal: Principal): String <<@GetMapping("/profile")>>
+            + showSearchPage(): String <<@GetMapping("/search")>>
+        }
+        
+        class AuthController <<@Controller @RequiredArgsConstructor>> {
+            - userService: UserService
+            --
+            + showLoginPage(): String <<@GetMapping("/login")>>
+            + showRegisterPage(model: Model): String <<@GetMapping("/register")>>
+            + registerUser(registerDTO: RegisterDTO, bindingResult: BindingResult, model: Model): String <<@PostMapping("/register")>>
+            + homePage(): String <<@GetMapping("/")>>
+        }
+        
+        class AdminController <<@Controller @RequestMapping("/admin") @PreAuthorize("hasRole('ADMIN')") @RequiredArgsConstructor>> {
+            - adminService: AdminService
+            --
+            + showAdminDashboard(model: Model): String <<@GetMapping("/dashboard")>>
+            + showUsersPage(model: Model): String <<@GetMapping("/users")>>
+        }
+        
+        class AdminRESTController <<@RestController @RequestMapping("/admin/api") @PreAuthorize("hasRole('ADMIN')") @RequiredArgsConstructor>> {
+            - adminService: AdminService
+            --
+            + getAllUsers(): ResponseEntity<List<UserDTO>> <<@GetMapping("/users")>>
+            + deleteUser(id: Long): ResponseEntity<?> <<@DeleteMapping("/users/{id}")>>
+            + getUserStatistics(): ResponseEntity<Map<String, Object>> <<@GetMapping("/statistics")>>
+        }
+    }
+    
+    package "mapper" <<Utility Layer>> {
+        
+        class SemanticScholarMapper <<@Component @Slf4j>> {
+            --
+            + mapToArticleDTO(paper: SemanticScholarPaper): ArticleDTO
+            + filterByDocumentType(article: ArticleDTO, documentType: String): boolean
+            + filterByLanguage(article: ArticleDTO, language: String): boolean
+            + toSemanticScholarResponse(rawResponse: String): SemanticScholarResponse
+        }
+    }
+    
+    package "config" <<Configuration Layer>> {
+        
+        class SecurityConfig <<@Configuration @EnableWebSecurity>> {
+            --
+            + passwordEncoder(): PasswordEncoder <<@Bean>>
+            + securityFilterChain(http: HttpSecurity): SecurityFilterChain <<@Bean>>
+        }
+        
+        class CacheConfig <<@Configuration @EnableCaching>> {
+            --
+            + cacheManager(): CacheManager <<@Bean>>
+        }
+    }
+    
+    package "client" <<External Integration Layer>> {
+        
+        interface SemanticScholarApiClient {
+            + searchPapers(query: String, offset: int, limit: int, fields: String): SemanticScholarResponse
+            + getPaper(paperId: String, fields: String): SemanticScholarPaper
+            + getRecommendations(paperIds: List<String>): SemanticScholarResponse
+        }
+        
+        class SemanticScholarApiClientImpl <<@Component @RequiredArgsConstructor @Slf4j>> {
+            - restTemplate: RestTemplate
+            - baseUrl: String <<@Value("${semantic.scholar.api.url}")>>
+            --
+            + searchPapers(query: String, offset: int, limit: int, fields: String): SemanticScholarResponse
+            + getPaper(paperId: String, fields: String): SemanticScholarPaper
+            + getRecommendations(paperIds: List<String>): SemanticScholarResponse
+            - buildSearchUrl(query: String, offset: int, limit: int, fields: String): String
+            - buildPaperUrl(paperId: String, fields: String): String
+        }
+    }
+}
+
+' Relationships
+UserRepository <|.. JpaRepository
+SearchHistoryRepository <|.. JpaRepository
+ArticleViewHistoryRepository <|.. JpaRepository
+ArticleFavoriteRepository <|.. JpaRepository
+
+ArticleService <|.. SemanticScholarService
+SemanticScholarApiClient <|.. SemanticScholarApiClientImpl
+
+' Service dependencies
+SemanticScholarService *-- SemanticScholarApiClient
+SemanticScholarService *-- SemanticScholarMapper
+UserService *-- UserRepository
+SearchHistoryService *-- SearchHistoryRepository
+ArticleViewHistoryService *-- ArticleViewHistoryRepository
+ArticleFavoriteService *-- ArticleFavoriteRepository
+AdminService *-- UserRepository
+
+' Controller dependencies
+SearchController *-- ArticleService
+SearchController *-- SearchHistoryService
+SearchRestController *-- ArticleService
+SearchRestController *-- SearchHistoryService
+SearchRestController *-- ArticleViewHistoryService
+SearchRestController *-- SemanticScholarService
+SearchRestController *-- ArticleFavoriteService
+UserController *-- UserRepository
+AuthController *-- UserService
+AdminController *-- AdminService
+AdminRESTController *-- AdminService
+
+' Entity relationships
+User ||--o{ SearchHistory : "userEmail"
+User ||--o{ ArticleViewHistory : "userEmail"
+User ||--o{ ArticleFavorite : "userEmail"
+SemanticScholarPaper ||--o{ Author : "authors"
+SemanticScholarPaper ||--|| ExternalIds : "externalIds"
+SemanticScholarResponse ||--o{ SemanticScholarPaper : "data"
+
+@enduml
